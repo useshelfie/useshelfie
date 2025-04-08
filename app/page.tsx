@@ -1,7 +1,7 @@
-import Link from 'next/link'
-import NavigationBar from '@/components/navigation-bar' // Assuming this path is correct
-import { Button } from '@/components/ui/button'
-import { ArrowRight } from 'lucide-react'
+import Link from "next/link"
+import NavigationBar from "@/components/navigation-bar" // Assuming this path is correct
+import { Button } from "@/components/ui/button"
+import { ArrowRight } from "lucide-react"
 
 export default function Home() {
 	return (
@@ -17,8 +17,9 @@ export default function Home() {
 							Create & Share Beautiful Product Catalogs
 						</h1>
 						<p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl">
-							Effortlessly build, manage, and share dynamic product collections
-							with rich media, optimized for web and mobile. Get started today.
+							Effortlessly build, manage, and share dynamic
+							product collections with rich media, optimized for
+							web and mobile. Get started today.
 						</p>
 					</div>
 					<div className="mt-6">

@@ -1,15 +1,15 @@
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import Link from "next/link"
+import { createClient } from "@/lib/supabase/server"
 
-import { Button } from '@/components/ui/button'
+import { Button } from "@/components/ui/button"
 import {
 	NavigationMenu,
 	NavigationMenuItem,
 	NavigationMenuLink,
 	NavigationMenuList,
 	navigationMenuTriggerStyle,
-} from '@/components/ui/navigation-menu'
-import { Mountain } from 'lucide-react' // Example icon
+} from "@/components/ui/navigation-menu"
+import { Mountain } from "lucide-react" // Example icon
 
 export default async function NavigationBar() {
 	const supabase = await createClient()
@@ -20,9 +20,9 @@ export default async function NavigationBar() {
 	const isAuthenticated = !!session
 
 	const navLinks = [
-		{ href: '/', label: 'Home' },
-		{ href: '/pricing', label: 'Pricing' },
-		{ href: '/about', label: 'About Us' },
+		{ href: "/", label: "Home" },
+		{ href: "/pricing", label: "Pricing" },
+		{ href: "/about", label: "About Us" },
 	]
 
 	return (
@@ -36,13 +36,15 @@ export default async function NavigationBar() {
 
 				{/* Main Navigation */}
 				<NavigationMenu className="flex-1">
-					{' '}
+					{" "}
 					{/* Allow menu to take space */}
 					<NavigationMenuList>
 						{navLinks.map((link) => (
 							<NavigationMenuItem key={link.href}>
 								<Link href={link.href} legacyBehavior passHref>
-									<NavigationMenuLink className={navigationMenuTriggerStyle()}>
+									<NavigationMenuLink
+										className={navigationMenuTriggerStyle()}
+									>
 										{link.label}
 									</NavigationMenuLink>
 								</Link>
@@ -53,7 +55,7 @@ export default async function NavigationBar() {
 
 				{/* Auth Actions */}
 				<div className="flex items-center justify-end space-x-4 ml-6">
-					{' '}
+					{" "}
 					{/* Add margin-left */}
 					{isAuthenticated ? (
 						<Link href="/dashboard" legacyBehavior passHref>

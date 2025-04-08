@@ -1,10 +1,10 @@
-'use client'
+"use client"
 
-import { useChat } from '@ai-sdk/react'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { useState } from 'react'
+import { useChat } from "@ai-sdk/react"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { useState } from "react"
 
 export default function Chat() {
 	const { messages, input, handleInputChange, handleSubmit, isLoading } =
@@ -16,8 +16,8 @@ export default function Chat() {
 			setError(null)
 			await handleSubmit(e)
 		} catch (err) {
-			console.error('Error sending message:', err)
-			setError('Failed to send message. Please try again.')
+			console.error("Error sending message:", err)
+			setError("Failed to send message. Please try again.")
 		}
 	}
 
@@ -28,14 +28,14 @@ export default function Chat() {
 					<div
 						key={message.id}
 						className={`mb-4 p-3 rounded-lg ${
-							message.role === 'user'
-								? 'bg-primary/10 ml-auto max-w-[80%]'
-								: 'bg-muted mr-auto max-w-[80%]'
+							message.role === "user"
+								? "bg-primary/10 ml-auto max-w-[80%]"
+								: "bg-muted mr-auto max-w-[80%]"
 						}`}
 					>
 						{message.parts.map((part, i) => {
 							switch (part.type) {
-								case 'text':
+								case "text":
 									return (
 										<div
 											key={`${message.id}-${i}`}
@@ -66,7 +66,7 @@ export default function Chat() {
 					className="flex-1"
 				/>
 				<Button type="submit" disabled={isLoading || !input.trim()}>
-					{isLoading ? 'Sending...' : 'Send'}
+					{isLoading ? "Sending..." : "Send"}
 				</Button>
 			</form>
 

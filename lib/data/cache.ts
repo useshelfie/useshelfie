@@ -1,5 +1,5 @@
-import { unstable_cache } from 'next/cache'
-import { createClient } from '@/lib/supabase/server'
+import { unstable_cache } from "next/cache"
+import { createClient } from "@/lib/supabase/server"
 
 export async function getCachedCategories() {
 	try {
@@ -8,29 +8,29 @@ export async function getCachedCategories() {
 			async () => {
 				try {
 					const { data: categories, error } = await supabase
-						.from('categories')
-						.select('*')
-						.order('created_at', { ascending: false })
+						.from("categories")
+						.select("*")
+						.order("created_at", { ascending: false })
 
 					if (error) {
-						console.error('Error fetching categories:', error)
+						console.error("Error fetching categories:", error)
 						return []
 					}
 
 					return categories || []
 				} catch (err) {
-					console.error('Cache execution error:', err)
+					console.error("Cache execution error:", err)
 					return []
 				}
 			},
-			['all-categories'],
+			["all-categories"],
 			{
 				revalidate: 10,
-				tags: ['categories'],
+				tags: ["categories"],
 			}
 		)()
 	} catch (err) {
-		console.error('Cache wrapper error:', err)
+		console.error("Cache wrapper error:", err)
 		return []
 	}
 }
@@ -42,29 +42,29 @@ export async function getCachedProducts() {
 			async () => {
 				try {
 					const { data: products, error } = await supabase
-						.from('products')
-						.select('*, categories(*)')
-						.order('created_at', { ascending: false })
+						.from("products")
+						.select("*, categories(*)")
+						.order("created_at", { ascending: false })
 
 					if (error) {
-						console.error('Error fetching products:', error)
+						console.error("Error fetching products:", error)
 						return []
 					}
 
 					return products || []
 				} catch (err) {
-					console.error('Cache execution error:', err)
+					console.error("Cache execution error:", err)
 					return []
 				}
 			},
-			['all-products'],
+			["all-products"],
 			{
 				revalidate: 10,
-				tags: ['products'],
+				tags: ["products"],
 			}
 		)()
 	} catch (err) {
-		console.error('Cache wrapper error:', err)
+		console.error("Cache wrapper error:", err)
 		return []
 	}
 }

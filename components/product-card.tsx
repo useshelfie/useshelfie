@@ -1,4 +1,4 @@
-'use client'
+"use client"
 
 import {
 	Card,
@@ -6,11 +6,11 @@ import {
 	CardHeader,
 	CardTitle,
 	CardDescription,
-} from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge' // For displaying categories
-import { redirect } from 'next/navigation'
-import { formatPrice } from '@/lib/utils'
-import { ProductWithDetails } from '@/lib/data/products'
+} from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge" // For displaying categories
+import { redirect } from "next/navigation"
+import { formatPrice } from "@/lib/utils"
+import { ProductWithDetails } from "@/lib/data/products"
 
 interface Props {
 	product: ProductWithDetails
@@ -34,7 +34,9 @@ export default function ProductCard({ product, sellerId }: Props) {
 			</CardHeader>
 			<CardContent>
 				{product.description && (
-					<p className="mb-4 text-muted-foreground">{product.description}</p>
+					<p className="mb-4 text-muted-foreground">
+						{product.description}
+					</p>
 				)}
 				{product.categories && product.categories.length > 0 && (
 					<div className="flex flex-wrap gap-2">

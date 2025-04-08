@@ -5,8 +5,8 @@ import {
 	Inbox,
 	Search,
 	Settings,
-} from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
+} from "lucide-react"
+import { createClient } from "@/lib/supabase/server"
 import {
 	Sidebar,
 	SidebarContent,
@@ -18,36 +18,36 @@ import {
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
-} from '@/components/ui/sidebar'
+} from "@/components/ui/sidebar"
 
 // Menu items.
 const items = [
 	{
-		title: 'Main',
-		url: '/dashboard/',
+		title: "Main",
+		url: "/dashboard/",
 		icon: Home,
 	},
 	{
-		title: 'Products',
-		url: '/dashboard/products',
+		title: "Products",
+		url: "/dashboard/products",
 		icon: Inbox,
 	},
 	{
-		title: 'Categories',
-		url: '/dashboard/categories',
+		title: "Categories",
+		url: "/dashboard/categories",
 		icon: Calendar,
 	},
 ]
 
 const systemItems = [
 	{
-		title: 'Settings',
-		url: '/dashboard/settings',
+		title: "Settings",
+		url: "/dashboard/settings",
 		icon: Settings,
 	},
 	{
-		title: 'Search',
-		url: '/dashboard/search',
+		title: "Search",
+		url: "/dashboard/search",
 		icon: Search,
 	},
 ]
@@ -56,7 +56,6 @@ export async function DashboardSidebar() {
 	const supabase = await createClient()
 	const {
 		data: { user },
-		error: authError,
 	} = await supabase.auth.getUser()
 	return (
 		<Sidebar>
@@ -69,7 +68,9 @@ export async function DashboardSidebar() {
 									<GalleryVerticalEnd className="size-4" />
 								</div>
 								<div className="flex flex-col gap-0.5 leading-none">
-									<span className="font-semibold">Shelfie</span>
+									<span className="font-semibold">
+										Shelfie
+									</span>
 									<span className="">v1.0.0</span>
 								</div>
 							</a>
@@ -116,7 +117,7 @@ export async function DashboardSidebar() {
 			<SidebarFooter>
 				<div>
 					<p className="text-sm text-muted-foreground">
-						Logged in as:{' '}
+						Logged in as:{" "}
 						<strong className="font-medium text-foreground">
 							{user?.email}
 						</strong>

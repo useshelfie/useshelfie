@@ -1,10 +1,10 @@
 // app/dashboard/products/actions.ts
-'use server'
+"use server"
 
-import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import { productSchema } from '@/schemas/productSchema' // Assuming this is still just name, desc, price
+import { revalidatePath } from "next/cache"
+import { redirect } from "next/navigation"
+import { createClient } from "@/lib/supabase/server"
+import { productSchema } from "@/schemas/productSchema" // Assuming this is still just name, desc, price
 
 // Define the shape of the state returned by the action
 export type CreateProductFormState = {
@@ -16,7 +16,7 @@ export type CreateProductFormState = {
 		categories?: string[] // Add errors for categories
 		database?: string[]
 	}
-	type: 'error' | 'success' | null
+	type: "error" | "success" | null
 }
 
 export async function createProductAction(
@@ -31,40 +31,40 @@ export async function createProductAction(
 		error: authError,
 	} = await supabase.auth.getUser()
 	if (authError || !user) {
-		redirect('/login')
+		redirect("/login")
 	}
 
 	// 2. Extract Base Product Data
 	const rawProductData = {
-		name: formData.get('name'),
-		description: formData.get('description'),
-		price: formData.get('price'),
+		name: formData.get("name"),
+		description: formData.get("description"),
+		price: formData.get("price"),
 	}
 
 	// 3. Validate Base Product Data
 	const validatedProductFields = productSchema.safeParse(rawProductData)
 	if (!validatedProductFields.success) {
 		return {
-			message: 'Product validation failed.',
+			message: "Product validation failed.",
 			errors: validatedProductFields.error.flatten().fieldErrors,
-			type: 'error',
+			type: "error",
 		}
 	}
 
 	// 4. Extract Category IDs
 	// Assuming category IDs are submitted as 'category_ids[]' or similar from multi-select
 	const categoryIds = formData
-		.getAll('category_ids')
-		.filter((id) => typeof id === 'string' && id.length > 0) as string[]
+		.getAll("category_ids")
+		.filter((id) => typeof id === "string" && id.length > 0) as string[]
 	// Basic validation: Check if they look like UUIDs (simple check)
 	const uuidRegex =
 		/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
 	const invalidCategoryIds = categoryIds.filter((id) => !uuidRegex.test(id))
 	if (invalidCategoryIds.length > 0) {
 		return {
-			message: 'Invalid category format submitted.',
-			errors: { categories: ['Invalid category ID format.'] },
-			type: 'error',
+			message: "Invalid category format submitted.",
+			errors: { categories: ["Invalid category ID format."] },
+			type: "error",
 		}
 	}
 
@@ -75,22 +75,24 @@ export async function createProductAction(
 
 	// 5. Insert Product
 	const { data: newProduct, error: productInsertError } = await supabase
-		.from('products')
+		.from("products")
 		.insert({
 			...validatedProductFields.data,
 			user_id: user.id,
 		})
-		.select('id') // Get the ID of the newly created product
+		.select("id") // Get the ID of the newly created product
 		.single()
 
 	if (productInsertError || !newProduct) {
-		console.error('Supabase Product Insert Error:', productInsertError)
+		console.error("Supabase Product Insert Error:", productInsertError)
 		return {
-			message: `Database error creating product: ${productInsertError?.message ?? 'Unknown error'}`,
+			message: `Database error creating product: ${productInsertError?.message ?? "Unknown error"}`,
 			errors: {
-				database: [productInsertError?.message ?? 'Failed to create product.'],
+				database: [
+					productInsertError?.message ?? "Failed to create product.",
+				],
 			},
-			type: 'error',
+			type: "error",
 		}
 	}
 
@@ -99,19 +101,22 @@ export async function createProductAction(
 	// 6. Link Categories (if any were selected)
 	if (categoryIds.length > 0) {
 		// Optional: Verify selected categories belong to the user before linking
-		const { data: validCategories, error: categoryCheckError } = await supabase
-			.from('categories')
-			.select('id')
-			.eq('user_id', user.id)
-			.in('id', categoryIds)
+		const { data: validCategories, error: categoryCheckError } =
+			await supabase
+				.from("categories")
+				.select("id")
+				.eq("user_id", user.id)
+				.in("id", categoryIds)
 
 		if (categoryCheckError || !validCategories) {
 			// Could rollback product creation here if using a transaction, otherwise just report error
-			console.error('Error verifying categories:', categoryCheckError)
+			console.error("Error verifying categories:", categoryCheckError)
 			return {
-				message: 'Error verifying selected categories.',
-				errors: { categories: ['Could not verify selected categories.'] },
-				type: 'error',
+				message: "Error verifying selected categories.",
+				errors: {
+					categories: ["Could not verify selected categories."],
+				},
+				type: "error",
 			}
 		}
 
@@ -125,40 +130,46 @@ export async function createProductAction(
 
 		if (categoriesToLink.length > 0) {
 			const { error: linkError } = await supabase
-				.from('product_categories')
+				.from("product_categories")
 				.insert(categoriesToLink)
 
 			if (linkError) {
 				// Again, rollback would be ideal in a transaction
-				console.error('Supabase Category Link Error:', linkError)
+				console.error("Supabase Category Link Error:", linkError)
 				// Clean up the newly created product? Or leave it and report error?
 				// await supabase.from('products').delete().eq('id', newProductId); // Example cleanup
 				return {
 					message: `Product created, but failed to link categories: ${linkError.message}`,
 					// Keep success minimal, but indicate partial failure
 					errors: {
-						database: [`Failed to link categories: ${linkError.message}`],
+						database: [
+							`Failed to link categories: ${linkError.message}`,
+						],
 					},
-					type: 'error', // Treat partial failure as error for user feedback
+					type: "error", // Treat partial failure as error for user feedback
 				}
 			}
 		} else if (categoryIds.length > 0) {
 			// User selected categories, but none were valid/owned by them
 			return {
-				message: 'Selected categories are not valid or do not belong to you.',
-				errors: { categories: ['Invalid categories selected.'] },
-				type: 'error',
+				message:
+					"Selected categories are not valid or do not belong to you.",
+				errors: { categories: ["Invalid categories selected."] },
+				type: "error",
 			}
 		}
 	}
 
 	// 7. Success
-	console.log('Product created successfully:', validatedProductFields.data.name)
-	revalidatePath('/dashboard/products') // Revalidate product list page
+	console.log(
+		"Product created successfully:",
+		validatedProductFields.data.name
+	)
+	revalidatePath("/dashboard/products") // Revalidate product list page
 	// Don't redirect here, let the form handle success state
 
 	return {
 		message: `Product "${validatedProductFields.data.name}" created successfully!`,
-		type: 'success',
+		type: "success",
 	}
 }

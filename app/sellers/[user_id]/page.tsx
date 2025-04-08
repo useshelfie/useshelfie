@@ -1,6 +1,6 @@
-import { notFound } from 'next/navigation'
-import { getSellerProfileAndProducts } from '@/lib/data/products'
-import ProductCard from '@/components/product-card'
+import { notFound } from "next/navigation"
+import { getSellerProfileAndProducts } from "@/lib/data/products"
+import ProductCard from "@/components/product-card"
 
 type Props = {
 	params: { user_id: string }
@@ -17,7 +17,8 @@ export default async function SellerProfilePage({ params }: Props) {
 	return (
 		<div className="container mx-auto px-4 py-8">
 			<h1 className="mb-6 text-3xl font-bold">
-				Products by <span className="text-primary">{profile.username}</span>
+				Products by{" "}
+				<span className="text-primary">{profile.username}</span>
 			</h1>
 
 			{products.length === 0 ? (

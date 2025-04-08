@@ -1,13 +1,13 @@
-import { Suspense } from 'react'
-import { createClient } from '@/lib/supabase/server'
+import { Suspense } from "react"
+import { createClient } from "@/lib/supabase/server"
 import {
 	Card,
 	CardContent,
 	CardHeader,
 	CardTitle,
 	CardDescription,
-} from '@/components/ui/card'
-import { unstable_cache } from 'next/cache'
+} from "@/components/ui/card"
+import { unstable_cache } from "next/cache"
 
 interface DashboardStats {
 	productsCount: number
@@ -22,23 +22,23 @@ async function fetchDashboardStats(): Promise<DashboardStats> {
 				const [{ count: productsCount }, { count: categoriesCount }] =
 					await Promise.all([
 						supabase
-							.from('products')
-							.select('*', { count: 'exact', head: true }),
+							.from("products")
+							.select("*", { count: "exact", head: true }),
 						supabase
-							.from('categories')
-							.select('*', { count: 'exact', head: true }),
+							.from("categories")
+							.select("*", { count: "exact", head: true }),
 					])
 				return {
 					productsCount: productsCount || 0,
 					categoriesCount: categoriesCount || 0,
 				}
 			} catch (error) {
-				console.error('Failed to fetch dashboard stats:', error)
+				console.error("Failed to fetch dashboard stats:", error)
 				return { productsCount: 0, categoriesCount: 0 }
 			}
 		},
-		['dashboard-stats'],
-		{ revalidate: 60, tags: ['products', 'categories'] }
+		["dashboard-stats"],
+		{ revalidate: 60, tags: ["products", "categories"] }
 	)()
 }
 
@@ -88,10 +88,14 @@ async function DashboardStats() {
 			<Card role="region" aria-label="Categories Count">
 				<CardHeader>
 					<CardTitle>Categories</CardTitle>
-					<CardDescription>Total number of categories</CardDescription>
+					<CardDescription>
+						Total number of categories
+					</CardDescription>
 				</CardHeader>
 				<CardContent>
-					<p className="text-3xl font-bold">{stats.categoriesCount}</p>
+					<p className="text-3xl font-bold">
+						{stats.categoriesCount}
+					</p>
 				</CardContent>
 			</Card>
 		</div>

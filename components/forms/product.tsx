@@ -1,5 +1,5 @@
 // components/product-form.tsx
-'use client'
+"use client"
 
 import React, {
 	useState,
@@ -7,15 +7,15 @@ import React, {
 	useRef,
 	useTransition,
 	useActionState,
-} from 'react'
-import { useFormStatus } from 'react-dom'
-import { Loader2, PlusCircle, Terminal, X } from 'lucide-react'
+} from "react"
+import { useFormStatus } from "react-dom"
+import { Loader2, PlusCircle, Terminal, X } from "lucide-react"
 
 // Shadcn UI Imports
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import {
 	Card,
 	CardContent,
@@ -23,8 +23,8 @@ import {
 	CardFooter,
 	CardHeader,
 	CardTitle,
-} from '@/components/ui/card'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+} from "@/components/ui/card"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
 	Dialog,
 	DialogContent,
@@ -33,26 +33,26 @@ import {
 	DialogHeader,
 	DialogTitle,
 	DialogTrigger,
-} from '@/components/ui/dialog'
-import { Badge } from '@/components/ui/badge'
+} from "@/components/ui/dialog"
+import { Badge } from "@/components/ui/badge"
 
 // Actions & Schemas
 import {
 	createProductAction,
 	CreateProductFormState,
-} from '@/app/dashboard/products/actions'
+} from "@/app/dashboard/products/actions"
 import {
 	createCategoryAction,
 	CreateCategoryFormState,
-} from '@/app/dashboard/categories/actions' // Import category action
+} from "@/app/dashboard/categories/actions" // Import category action
 
 // Types
 type Category = { id: string; name: string }
 
 // Initial States
-const initialProductState: CreateProductFormState = { message: '', type: null }
+const initialProductState: CreateProductFormState = { message: "", type: null }
 const initialCategoryState: CreateCategoryFormState = {
-	message: '',
+	message: "",
 	type: null,
 }
 
@@ -62,7 +62,7 @@ function ProductSubmitButton() {
 	return (
 		<Button type="submit" aria-disabled={pending} disabled={pending}>
 			{pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-			{pending ? 'Creating Product...' : 'Create Product'}
+			{pending ? "Creating Product..." : "Create Product"}
 		</Button>
 	)
 }
@@ -85,7 +85,7 @@ export function ProductForm({
 
 	// Effect to reset form on successful product creation
 	useEffect(() => {
-		if (productState.type === 'success') {
+		if (productState.type === "success") {
 			productFormRef.current?.reset()
 			setSelectedCategories([]) // Clear selected categories too
 			// Optionally show toast notification
@@ -106,7 +106,9 @@ export function ProductForm({
 		setAvailableCategories((prev) => {
 			// Check if a category with this ID already exists
 			if (
-				prev.some((existingCategory) => existingCategory.id === newCategory.id)
+				prev.some(
+					(existingCategory) => existingCategory.id === newCategory.id
+				)
 			) {
 				// If it exists, just return the previous state unchanged
 				console.warn(
@@ -115,7 +117,9 @@ export function ProductForm({
 				return prev
 			}
 			// If it doesn't exist, add it and sort
-			return [...prev, newCategory].sort((a, b) => a.name.localeCompare(b.name))
+			return [...prev, newCategory].sort((a, b) =>
+				a.name.localeCompare(b.name)
+			)
 		})
 		setIsCategoryModalOpen(false) // Close modal
 		// Optionally auto-select:
@@ -124,7 +128,7 @@ export function ProductForm({
 
 	return (
 		<Card className="w-full max-w-lg">
-			{' '}
+			{" "}
 			{/* Increased max-width */}
 			<CardHeader>
 				<CardTitle>Create New Product</CardTitle>
@@ -142,21 +146,28 @@ export function ProductForm({
 					{productState.message && productState.type && (
 						<Alert
 							variant={
-								productState.type === 'error' ? 'destructive' : 'default'
+								productState.type === "error"
+									? "destructive"
+									: "default"
 							}
 						>
 							<Terminal className="h-4 w-4" />
 							<AlertTitle>
-								{productState.type === 'error' ? 'Error' : 'Success'}
+								{productState.type === "error"
+									? "Error"
+									: "Success"}
 							</AlertTitle>
-							<AlertDescription>{productState.message}</AlertDescription>
+							<AlertDescription>
+								{productState.message}
+							</AlertDescription>
 						</Alert>
 					)}
 
 					{/* Name Field */}
 					<div className="space-y-2">
 						<Label htmlFor="name">
-							Product Name <span className="text-destructive">*</span>
+							Product Name{" "}
+							<span className="text-destructive">*</span>
 						</Label>
 						<Input
 							id="name"
@@ -169,7 +180,9 @@ export function ProductForm({
 							aria-live="polite"
 							className="text-sm text-destructive"
 						>
-							{productState.errors?.name?.map((e) => <p key={e}>{e}</p>)}
+							{productState.errors?.name?.map((e) => (
+								<p key={e}>{e}</p>
+							))}
 						</div>
 					</div>
 
@@ -187,7 +200,9 @@ export function ProductForm({
 							aria-live="polite"
 							className="text-sm text-destructive"
 						>
-							{productState.errors?.description?.map((e) => <p key={e}>{e}</p>)}
+							{productState.errors?.description?.map((e) => (
+								<p key={e}>{e}</p>
+							))}
 						</div>
 					</div>
 
@@ -210,10 +225,17 @@ export function ProductForm({
 							aria-live="polite"
 							className="text-sm text-destructive"
 						>
-							{productState.errors?.price?.map((e) => <p key={e}>{e}</p>)}
-							{productState.errors?.database && !productState.errors.price && (
-								<p>{productState.errors.database.join(', ')}</p>
-							)}
+							{productState.errors?.price?.map((e) => (
+								<p key={e}>{e}</p>
+							))}
+							{productState.errors?.database &&
+								!productState.errors.price && (
+									<p>
+										{productState.errors.database.join(
+											", "
+										)}
+									</p>
+								)}
 						</div>
 					</div>
 
@@ -255,8 +277,13 @@ export function ProductForm({
 							))}
 						</div>
 
-						<div className="text-sm text-destructive" aria-live="polite">
-							{productState.errors?.categories?.map((e) => <p key={e}>{e}</p>)}
+						<div
+							className="text-sm text-destructive"
+							aria-live="polite"
+						>
+							{productState.errors?.categories?.map((e) => (
+								<p key={e}>{e}</p>
+							))}
 						</div>
 
 						<div className="flex flex-wrap gap-2 pt-2">
@@ -264,7 +291,8 @@ export function ProductForm({
 								.filter(
 									(availCat) =>
 										!selectedCategories.some(
-											(selCat) => selCat.id === availCat.id
+											(selCat) =>
+												selCat.id === availCat.id
 										)
 								)
 								.map((cat) => (
@@ -285,15 +313,24 @@ export function ProductForm({
 								onOpenChange={setIsCategoryModalOpen}
 							>
 								<DialogTrigger asChild>
-									<Button type="button" variant="ghost" size="sm">
-										<PlusCircle className="mr-1 h-4 w-4" /> New Category
+									<Button
+										type="button"
+										variant="ghost"
+										size="sm"
+									>
+										<PlusCircle className="mr-1 h-4 w-4" />{" "}
+										New Category
 									</Button>
 								</DialogTrigger>
 								<DialogContent>
 									{/* --- Inline Category Creation Form --- */}
 									<CreateCategoryInlineForm
-										onCategoryCreated={handleNewCategoryCreated}
-										onClose={() => setIsCategoryModalOpen(false)}
+										onCategoryCreated={
+											handleNewCategoryCreated
+										}
+										onClose={() =>
+											setIsCategoryModalOpen(false)
+										}
 									/>
 								</DialogContent>
 							</Dialog>
@@ -324,7 +361,7 @@ function CreateCategoryInlineForm({
 	const [isPending, startTransition] = useTransition() // For form status without useFormStatus
 
 	useEffect(() => {
-		if (state.type === 'success' && state.newCategory) {
+		if (state.type === "success" && state.newCategory) {
 			onCategoryCreated(state.newCategory) // Pass new category up
 			formRef.current?.reset() // Reset inline form
 		}
@@ -351,12 +388,12 @@ function CreateCategoryInlineForm({
 			{/* Category State Message */}
 			{state.message && state.type && (
 				<Alert
-					variant={state.type === 'error' ? 'destructive' : 'default'}
+					variant={state.type === "error" ? "destructive" : "default"}
 					className="text-xs"
 				>
 					<Terminal className="h-4 w-4" />
 					<AlertTitle className="text-xs">
-						{state.type === 'error' ? 'Error' : 'Success'}
+						{state.type === "error" ? "Error" : "Success"}
 					</AlertTitle>
 					<AlertDescription className="text-xs">
 						{state.message}
@@ -379,7 +416,9 @@ function CreateCategoryInlineForm({
 					className="text-sm text-destructive"
 				>
 					{state.errors?.name?.map((e) => <p key={e}>{e}</p>)}
-					{state.errors?.database && <p>{state.errors.database.join(', ')}</p>}
+					{state.errors?.database && (
+						<p>{state.errors.database.join(", ")}</p>
+					)}
 				</div>
 			</div>
 
@@ -393,8 +432,10 @@ function CreateCategoryInlineForm({
 					Cancel
 				</Button>
 				<Button type="submit" disabled={isPending}>
-					{isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-					{isPending ? 'Creating...' : 'Create Category'}
+					{isPending ? (
+						<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+					) : null}
+					{isPending ? "Creating..." : "Create Category"}
 				</Button>
 			</DialogFooter>
 		</form>

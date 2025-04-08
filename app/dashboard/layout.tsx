@@ -1,8 +1,8 @@
-import { Sidebar, SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
-import { Suspense } from 'react'
-import { LoadingSpinner } from '@/components/ui/loading-spinner'
-import DashboardNavigationBar from '@/components/dashboard-navigation-bar'
-import { DashboardSidebar } from '@/components/dashboard-sidebar'
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
+import { Suspense } from "react"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import DashboardNavigationBar from "@/components/dashboard-navigation-bar"
+import { DashboardSidebar } from "@/components/dashboard-sidebar"
 
 export default function DashboardLayout({
 	children,

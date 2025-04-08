@@ -1,9 +1,9 @@
-'use client'
+"use client"
 
-import { useTransition } from 'react'
-import { Button } from '@/components/ui/button'
-import { deleteCategory } from '../actions'
-import { toast } from 'sonner'
+import { useTransition } from "react"
+import { Button } from "@/components/ui/button"
+import { deleteCategory } from "../actions"
+import { toast } from "sonner"
 
 interface Category {
 	id: string
@@ -20,8 +20,8 @@ export function CategoryList({ categories }: { categories: Category[] }) {
 				await deleteCategory(id)
 				toast.success(`Category "${name}" deleted successfully`)
 			} catch (error) {
-				console.error('Error deleting category:', error)
-				toast.error('Failed to delete category')
+				console.error("Error deleting category:", error)
+				toast.error("Failed to delete category")
 			}
 		})
 	}
@@ -51,7 +51,7 @@ export function CategoryList({ categories }: { categories: Category[] }) {
 						onClick={() => handleDelete(category.id, category.name)}
 						disabled={isPending}
 					>
-						{isPending ? 'Deleting...' : 'Delete'}
+						{isPending ? "Deleting..." : "Delete"}
 					</Button>
 				</div>
 			))}

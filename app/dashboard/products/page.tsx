@@ -1,9 +1,9 @@
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import Link from 'next/link'
-import Image from 'next/image'
-import { Suspense } from 'react'
-import { getCachedProducts } from '@/lib/data/cache'
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import Link from "next/link"
+import Image from "next/image"
+import { Suspense } from "react"
+import { getCachedProducts } from "@/lib/data/cache"
 
 export default function ProductsPage() {
 	return (
@@ -89,17 +89,24 @@ async function ProductsList() {
 									</div>
 								) : (
 									<div className="flex items-center justify-center h-full">
-										<span className="text-muted-foreground">No image</span>
+										<span className="text-muted-foreground">
+											No image
+										</span>
 									</div>
 								)}
 							</div>
-							<h3 className="font-medium mb-1 line-clamp-1">{product.name}</h3>
+							<h3 className="font-medium mb-1 line-clamp-1">
+								{product.name}
+							</h3>
 							<p className="text-sm text-muted-foreground line-clamp-2">
 								{product.description}
 							</p>
 							<div className="mt-2 flex gap-2 flex-wrap">
 								{product.categories?.map(
-									(category: { name: string; id: string }) => (
+									(category: {
+										name: string
+										id: string
+									}) => (
 										<span
 											key={category.id}
 											className="inline-block px-2 py-1 text-xs rounded-full bg-gray-100 dark:bg-gray-800"

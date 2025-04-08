@@ -1,9 +1,8 @@
 // app/dashboard/products/create/page.tsx
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import { ProductForm } from '@/components/forms/product'
-import { getCategoriesForCurrentUser } from '@/lib/data/products' // Import function to get categories
-import { LogoutButton } from '@/components/logout-button' // Adjust path if needed
+import { redirect } from "next/navigation"
+import { createClient } from "@/lib/supabase/server"
+import { ProductForm } from "@/components/forms/product"
+import { getCategoriesForCurrentUser } from "@/lib/data/products" // Import function to get categories
 
 export default async function DashboardCreateProductPage() {
 	const supabase = await createClient()
@@ -13,7 +12,7 @@ export default async function DashboardCreateProductPage() {
 		error: authError,
 	} = await supabase.auth.getUser()
 	if (authError || !user) {
-		redirect('/login')
+		redirect("/login")
 	}
 
 	// Fetch categories for the current user server-side
