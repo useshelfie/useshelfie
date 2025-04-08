@@ -1,0 +1,71 @@
+# Create DB Functions
+- description: Guidelines for writing Supabase database functions
+  globs: "**/*.sql"
+  rules:
+    - Default to `SECURITY INVOKER`
+    - Set the `search_path` Configuration Parameter
+    - Adhere to SQL Standards and Validation
+    - Minimize Side Effects
+    - Use Explicit Typing
+    - Default to Immutable or Stable Functions
+    - Triggers (if Applicable)
+
+# Create Migration
+- description: Guidelines for writing Postgres migrations
+  globs: "supabase/migrations/**/*.sql"
+  rules:
+    - Use the naming convention `YYYYMMDDHHmmss_short_description.sql`
+    - Write Postgres-compatible SQL code for Supabase migration files
+    - Enable Row Level Security (RLS) when creating a new table
+    - Ensure RLS Policies cover all relevant access scenarios
+
+# Create RLS Policies
+- description: Guidelines for writing Postgres Row Level Security policies
+  globs: "**/*.sql"
+  rules:
+    - Use CREATE POLICY or ALTER POLICY queries
+    - Use "auth.uid()" instead of "current_user"
+    - SELECT policies should have USING but not WITH CHECK
+    - INSERT policies should have WITH CHECK but not USING
+    - UPDATE policies should have WITH CHECK and most often have USING
+    - DELETE policies should have USING but not WITH CHECK
+
+# Front-End Developer
+- description: Front-End Developer
+  globs: "**/*.ts"
+  rules:
+    - Follow the user’s requirements carefully
+    - Write correct, best practice, DRY principle code
+    - Include all required imports and ensure proper naming of key components
+    - Use Tailwind classes for styling HTML elements
+    - Implement accessibility features on elements
+
+# Next.js Guidelines
+- description: Bootstrap Next.js app with Supabase Auth
+  globs: "**/*.ts"
+  rules:
+    - Install @supabase/supabase-js and @supabase/ssr packages
+    - Use `@supabase/ssr`
+    - Use ONLY `getAll` and `setAll`
+
+# Postgres SQL Style Guide
+- description: Guidelines for writing Postgres SQL
+  globs: "**/*.sql"
+  rules:
+    - Use lowercase for SQL reserved words
+    - Use snake_case for tables and columns
+    - Prefer plurals for table names
+    - Avoid SQL reserved words and ensure names are unique
+
+# Writing Supabase Edge Functions
+- description: Coding rules for Supabase Edge Functions
+  globs: "supabase/functions/**/*.ts"
+  rules:
+    - Use Web APIs and Deno’s core APIs instead of external dependencies
+    - Do NOT use bare specifiers when importing dependencies
+    - Use `EdgeRuntime.waitUntil(promise)` for long-running tasks
+
+# Terminal Commands
+- description: Guidelines for writing terminal commands
+  rules:
+    - Use `pnpm` instead of `npm`
