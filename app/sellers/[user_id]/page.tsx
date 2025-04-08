@@ -1,12 +1,9 @@
 import { notFound } from "next/navigation"
 import { getSellerProfileAndProducts } from "@/lib/data/products"
 import ProductCard from "@/components/product-card"
+import { PageProps } from "@/.next/types/app/layout"
 
-type Props = {
-	params: { user_id: string }
-}
-
-export default async function SellerProfilePage({ params }: Props) {
+export default async function SellerProfilePage({ params }: PageProps) {
 	const { user_id } = await params
 	const { profile, products } = await getSellerProfileAndProducts(user_id)
 

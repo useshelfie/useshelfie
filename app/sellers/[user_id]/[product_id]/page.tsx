@@ -9,10 +9,7 @@ import {
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-
-type Props = {
-	params: { user_id: string; product_id: string }
-}
+import { PageProps } from "@/.next/types/app/layout"
 
 // Helper function to format currency (optional)
 function formatPrice(price: number) {
@@ -22,7 +19,7 @@ function formatPrice(price: number) {
 	}).format(price)
 }
 
-export default async function SellerProfileProduct({ params }: Props) {
+export default async function SellerProfileProduct({ params }: PageProps) {
 	const { user_id, product_id } = await params
 	const { profile, products } = await getSellerProfileAndProducts(user_id)
 

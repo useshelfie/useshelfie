@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic"
+
 import { CategoryList } from "./_components/category-list"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CreateCategoryForm } from "@/components/forms/category"
