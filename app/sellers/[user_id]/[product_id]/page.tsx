@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { getProductsByUsername } from '@/lib/data/products'
+import { getSellerProfileAndProducts } from '@/lib/data/products'
 import {
 	Card,
 	CardContent,
@@ -7,10 +7,11 @@ import {
 	CardTitle,
 	CardDescription,
 } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge' // For displaying categories
+import { Badge } from '@/components/ui/badge'
+import Link from 'next/link'
 
 type Props = {
-	params: { username: string }
+	params: { user_id: string; product_id: string }
 }
 
 // Helper function to format currency (optional)
@@ -21,30 +22,33 @@ function formatPrice(price: number) {
 	}).format(price)
 }
 
-export default async function SellerProfilePage({ params }: Props) {
-	const { username } = params
-	const { profile, products } = await getProductsByUsername(username)
+export default async function SellerProfileProduct({ params }: Props) {
+	const { user_id, product_id } = await params
+	const { profile, products } = await getSellerProfileAndProducts(user_id)
 
 	if (!profile) {
-		notFound() // Trigger 404 if seller username doesn't exist
+		notFound()
 	}
 
 	return (
-		<div className="container mx-auto px-4 py-8">
-			<h1 className="mb-6 text-3xl font-bold">
-				Products by <span className="text-primary">{profile.username}</span>
-			</h1>
-
-			{products.length === 0 ? (
-				<p className="text-muted-foreground">
-					This seller has not listed any products yet.
-				</p>
-			) : (
-				<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-					{products.map((product) => (
-						<Card key={product.id}>
+		<div className="container mx-auto mt-10">
+			<div>
+				<Link
+					className="text-blue-500 hover:underline"
+					href={`/sellers/${user_id}`}
+				>
+					return to previous page{' '}
+				</Link>
+			</div>
+			{products
+				.filter((product) => product.id === product_id)
+				.map((product) => (
+					<div>
+						<Card key={product.id} className="mb-4">
 							<CardHeader>
-								<CardTitle>{product.name}</CardTitle>
+								<CardTitle>
+									{product.name} by {profile.username}
+								</CardTitle>
 								<CardDescription className="pt-1 font-semibold text-lg text-primary">
 									{formatPrice(product.price)}
 								</CardDescription>
@@ -66,14 +70,9 @@ export default async function SellerProfilePage({ params }: Props) {
 									</div>
 								)}
 							</CardContent>
-							{/* No footer/actions needed for public view */}
 						</Card>
-					))}
-				</div>
-			)}
+					</div>
+				))}
 		</div>
 	)
 }
-
-// Optional: Generate static paths if you have a known list of sellers
-// export async function generateStaticParams() { ... }
