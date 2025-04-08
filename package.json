@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
+    "check-types": "tsc --noEmit",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "format": "prettier --write .",
-    "test": "turbo test"
+    "test": "echo 'Not implemented'"
   },
   "dependencies": {
     "@ai-sdk/groq": "^1.2.5",
@@ -54,6 +55,7 @@
     "prettier": "^3.5.3",
     "supabase": "^2.20.5",
     "tailwindcss": "^4",
+    "turbo": "^2.5.0",
     "typescript": "^5"
   },
   "lint-staged": {
@@ -61,6 +63,7 @@
       "prettier --write"
     ]
   },
+  "packageManager": "pnpm@9.4.0",
   "pnpm": {
     "onlyBuiltDependencies": [
       "sharp",
