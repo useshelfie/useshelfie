@@ -113,7 +113,8 @@ export async function DashboardSidebar() {
       <SidebarFooter>
         <div className="border rounded-md p-4 border-zinc-300 flex flex-col gap-2">
           <p className="text-sm text-muted-foreground">
-            Logged in as: <strong className="font-medium text-foreground">{user?.email.split("@")[0]}</strong>
+            Logged in as:{" "}
+            <strong className="font-medium text-foreground">{user?.email ? user.email.split("@")[0] : "User"}</strong>
           </p>
           <LogoutButton />
         </div>
