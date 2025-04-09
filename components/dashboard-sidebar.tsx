@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/sidebar"
 import { headers } from "next/headers"
 import Link from "next/link"
+import { LogoutButton } from "./logout-button"
 
 // Menu items.
 const items = [
@@ -110,10 +111,11 @@ export async function DashboardSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <div>
+        <div className="border rounded-md p-4 border-zinc-300 flex flex-col gap-2">
           <p className="text-sm text-muted-foreground">
-            Logged in as: <strong className="font-medium text-foreground">{user?.email}</strong>
+            Logged in as: <strong className="font-medium text-foreground">{user?.email.split("@")[0]}</strong>
           </p>
+          <LogoutButton />
         </div>
       </SidebarFooter>
     </Sidebar>
