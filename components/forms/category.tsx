@@ -1,6 +1,6 @@
 "use client"
 import { useFormStatus } from "react-dom"
-import { useRef, useEffect, useActionState, useContext, useState } from "react"
+import { useRef, useEffect, useActionState, useState } from "react"
 import { Loader2, Terminal } from "lucide-react"
 import { createCategoryAction, CreateCategoryFormState } from "@/app/dashboard/[company_id]/categories/actions"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -35,7 +35,11 @@ export function CreateCategoryForm() {
     }
   }, [state])
 
-  useEffect(() => {}, [])
+  useEffect(() => {
+    const pathname = window.location.pathname
+    const _companyId = pathname.split("/")[2] // Assuming the URL is like /dashboard/companyId
+    setCompanyId(_companyId)
+  }, [])
 
   return (
     <Card>
