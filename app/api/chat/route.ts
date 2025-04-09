@@ -5,12 +5,12 @@ import { streamText } from "ai"
 export const maxDuration = 30
 
 export async function POST(req: Request) {
-	const { messages } = await req.json()
+  const { messages } = await req.json()
 
-	const result = streamText({
-		model: groq("llama3-8b-8192"),
-		messages,
-	})
+  const result = streamText({
+    model: groq("llama3-8b-8192"),
+    messages,
+  })
 
-	return result.toDataStreamResponse()
+  return result.toDataStreamResponse()
 }
