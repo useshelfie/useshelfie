@@ -1,8 +1,8 @@
 "use client"
 import { useFormStatus } from "react-dom"
-import { useRef, useEffect, useActionState } from "react"
+import { useRef, useEffect, useActionState, useContext, useState } from "react"
 import { Loader2, Terminal } from "lucide-react"
-import { createCategoryAction, CreateCategoryFormState } from "@/app/dashboard/categories/actions"
+import { createCategoryAction, CreateCategoryFormState } from "@/app/dashboard/[company_id]/categories/actions"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -25,12 +25,17 @@ export function CreateCategoryForm() {
   const [state, formAction] = useActionState(createCategoryAction, initialState)
   const formRef = useRef<HTMLFormElement>(null)
 
+  // handle companyId
+  const [companyId, setCompanyId] = useState<string>("")
+
   useEffect(() => {
     if (state.type === "success") {
       formRef.current?.reset()
       // Optional: Show toast
     }
   }, [state])
+
+  useEffect(() => {}, [])
 
   return (
     <Card>
@@ -59,6 +64,7 @@ export function CreateCategoryForm() {
         <CardFooter>
           <SubmitButton />
         </CardFooter>
+        <input readOnly type="hidden" name="companyId" value={companyId} />
       </form>
     </Card>
   )

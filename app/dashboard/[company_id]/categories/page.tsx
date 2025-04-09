@@ -4,7 +4,7 @@ import { CategoryList } from "./_components/category-list"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CreateCategoryForm } from "@/components/forms/category"
 import { Suspense } from "react"
-import { getCachedCategories } from "@/lib/data/cache"
+import { getCategoriesByCompanyID } from "@/lib/data/cache"
 
 export default function CategoriesDashboardPage() {
   return (
@@ -39,7 +39,7 @@ export default function CategoriesDashboardPage() {
 }
 
 async function CategoriesWrapper() {
-  const categories = await getCachedCategories()
+  const categories = await getCategoriesByCompanyID()
 
   if (!categories?.length) {
     return (

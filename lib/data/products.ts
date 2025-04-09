@@ -7,9 +7,8 @@ export type ProductWithDetails = {
   description: string | null
   price: number
   created_at: string
-  profiles: {
-    // Assuming 'profiles' matches your table name
-    username: string
+  companies: {
+    name: string
   } | null
   categories: {
     id: string
@@ -18,31 +17,32 @@ export type ProductWithDetails = {
 }
 
 /**
- * Fetches a seller's profile and their products by username.
- * @param id - The username of the seller.
- * @returns An object containing the seller's profile and their products.
- * @throws Error if the profile cannot be found or a database error occurs.
+ * Fetches a company and their products by company id.
+ * @param company_id - The id of a company
+ * @returns An object containing the company's profile and their products.
+ * @throws Error if the company cannot be found or a database error occurs.
  */
-export async function getSellerProfileAndProducts(id: string): Promise<{
-  profile: { id: string; username: string } | null
+export async function getCompanyAndProducts(companyId: string): Promise<{
+  company: { id: string; owner_id: string; name: string } | null
   products: ProductWithDetails[]
 }> {
   const supabase = await createClient()
 
-  // Fetch profile to get user_id
-  const { data: profileData, error: profileError } = await supabase
-    .from("profiles")
-    .select("id, username")
-    .eq("id", id)
+  // Fetch company
+  const { data: companyData, error: companyDataError } = await supabase
+    .from("companies")
+    .select("id, owner_id, name")
+    .eq("id", companyId)
     .single()
 
-  if (profileError || !profileData) {
-    console.log(`Profile lookup failed for ${id}:`, profileError)
-    console.log(profileData)
-    throw new Error(`Profile lookup failed for ${id}: ${profileError?.message || "Unknown error"}`)
+  // Check for errors
+  if (companyDataError || !companyData) {
+    console.log(`Company lookup failed for ${companyId}:`, companyDataError)
+    console.log(companyData)
+    throw new Error(`Company lookup failed for ${companyId}: ${companyDataError?.message || "Unknown error"}`)
   }
 
-  // Fetch products with related profile and categories
+  // Fetch products with related companies and categories
   const { data: productsData, error: productsError } = await supabase
     .from("products")
     .select(
@@ -55,42 +55,34 @@ export async function getSellerProfileAndProducts(id: string): Promise<{
 			categories ( id, name )
 		`
     )
-    .eq("user_id", profileData.id)
+    .eq("company_id", companyData.id)
     .order("created_at", { ascending: false })
 
   if (productsError) {
-    console.error(`Error fetching products for ${id}:`, productsError)
-    return { profile: profileData, products: [] }
+    console.error(`Error fetching products for ${companyData.id}:`, productsError)
+    return { company: companyData, products: [] }
   }
 
   // Map the products data and add the profile info we already have
   const products = (productsData || []).map((product) => ({
     ...product,
-    profiles: {
-      username: profileData.username,
+    companies: {
+      name: companyData.name,
     },
   })) as ProductWithDetails[]
 
-  return { profile: profileData, products }
+  return { company: companyData, products }
 }
 
 /**
- * Fetches categories for the currently authenticated user.
- * @returns An array of the user's categories.
- * @throws Error if the user is not authenticated or a database error occurs.
+ * Fetches categories for the currently choosen company.
+ * @returns An array of the company's categories.
+ * @throws Error if database error occurs.
  */
-export async function getCategoriesForCurrentUser(): Promise<{ id: string; name: string }[]> {
+export async function getCategoriesForCurrentCompany(companyId: string): Promise<{ id: string; name: string }[]> {
   const supabase = await createClient()
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-  if (authError || !user) {
-    throw new Error("User not authenticated")
-  }
-
-  const { data, error } = await supabase.from("categories").select("id, name").eq("user_id", user.id).order("name")
+  const { data, error } = await supabase.from("categories").select("id, name").eq("company_id", companyId).order("name")
 
   if (error) {
     console.error("Error fetching categories:", error)

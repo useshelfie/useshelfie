@@ -1,7 +1,7 @@
 // app/dashboard/categories/actions.ts (or a shared actions file)
 "use server"
 
-import { revalidatePath, revalidateTag } from "next/cache"
+import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { categorySchema } from "@/schemas/categorySchema"
 
@@ -26,6 +26,7 @@ export async function createCategoryAction(
   }
 
   const rawFormData = { name: formData.get("name") }
+  const companyId = formData.get("companyId")
   const validatedFields = categorySchema.safeParse(rawFormData)
 
   if (!validatedFields.success) {
@@ -36,11 +37,19 @@ export async function createCategoryAction(
     }
   }
 
+  if (!companyId) {
+    return {
+      message: "Company ID is required.",
+      errors: {},
+      type: "error",
+    }
+  }
+
   const { name } = validatedFields.data
 
   const { data: newCategory, error: insertError } = await supabase
     .from("categories")
-    .insert({ name: name, user_id: user.id })
+    .insert({ name: name, user_id: user.id, company_id: companyId })
     .select("id, name") // Select the newly created category data
     .single() // Expect only one row back
 
@@ -63,8 +72,8 @@ export async function createCategoryAction(
   }
 
   // Revalidate paths where categories might be displayed or used
-  revalidatePath("/dashboard/categories")
-  revalidatePath("/dashboard/products/create") // Revalidate product form if it lists categories
+  revalidatePath(`/dashboard/${companyId}/categories`)
+  revalidatePath(`/dashboard/${companyId}/products/create`) // Revalidate product form if it lists categories
 
   return {
     message: `Category "${name}" created successfully!`,
@@ -79,7 +88,4 @@ export async function deleteCategory(categoryId: string) {
   const { error } = await supabase.from("categories").delete().eq("id", categoryId)
 
   if (error) throw new Error(error.message)
-
-  // Revalidate the cache
-  revalidateTag("categories")
 }

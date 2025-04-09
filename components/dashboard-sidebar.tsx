@@ -12,22 +12,24 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { headers } from "next/headers"
+import Link from "next/link"
 
 // Menu items.
 const items = [
   {
     title: "Main",
-    url: "/dashboard/",
+    url: "/",
     icon: Home,
   },
   {
     title: "Products",
-    url: "/dashboard/products",
+    url: "/products",
     icon: Inbox,
   },
   {
     title: "Categories",
-    url: "/dashboard/categories",
+    url: "/categories",
     icon: Calendar,
   },
 ]
@@ -35,12 +37,12 @@ const items = [
 const systemItems = [
   {
     title: "Settings",
-    url: "/dashboard/settings",
+    url: "/settings",
     icon: Settings,
   },
   {
     title: "Search",
-    url: "/dashboard/search",
+    url: "/search",
     icon: Search,
   },
 ]
@@ -50,6 +52,8 @@ export async function DashboardSidebar() {
   const {
     data: { user },
   } = await supabase.auth.getUser()
+  const headerList = await headers()
+  const currentCompanyID = headerList.get("x-current-path")?.split("/")[2] // assume pathname is /dashboard/[company_id]
   return (
     <Sidebar>
       <SidebarHeader>
@@ -77,10 +81,10 @@ export async function DashboardSidebar() {
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <a href={item.url}>
+                    <Link href={`/dashboard/${currentCompanyID}${item.url}`}>
                       <item.icon />
                       <span>{item.title}</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
