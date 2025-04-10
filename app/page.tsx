@@ -1,41 +1,29 @@
-import Link from "next/link"
-import NavigationBar from "@/components/navigation-bar" // Assuming this path is correct
-import { Button } from "@/components/ui/button"
-import { ArrowRight } from "lucide-react"
+import { Header } from "@/components/home/header"
+import { Hero } from "@/components/home/hero"
+import { WhyShelfie } from "@/components/home/why-shelfie"
+import { Features } from "@/components/home/features"
+import { Audience } from "@/components/home/audience"
+import { HowItWorks } from "@/components/home/how-it-works"
+import { OpenSource } from "@/components/home/open-source"
+import { Testimonials } from "@/components/home/testimonials"
+import { FinalCta } from "@/components/home/final-cta"
+import { Footer } from "@/components/home/footer"
 
 export default function Home() {
   return (
-    <>
-      {/* Render the Navigation Bar */}
-      <NavigationBar />
-
-      {/* Main Content Area */}
-      <main className="mx-auto container">
-        <section className="grid place-items-center gap-6 px-4 py-16 text-center md:px-6 md:py-24 lg:py-32">
-          <div className="space-y-4">
-            <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none">
-              Create & Share Beautiful Product Catalogs
-            </h1>
-            <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl">
-              Effortlessly build, manage, and share dynamic product collections with rich media, optimized for web and
-              mobile. Get started today.
-            </p>
-          </div>
-          <div className="mt-6">
-            <Link href="/auth/login" legacyBehavior passHref>
-              <Button size="lg">
-                Get Started
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
-          </div>
-        </section>
+    <div className="flex min-h-screen flex-col bg-background">
+      <Header />
+      <main className="flex-1">
+        <Hero />
+        <WhyShelfie />
+        <Features />
+        <Audience />
+        <HowItWorks />
+        <OpenSource />
+        <Testimonials />
+        <FinalCta />
       </main>
-      <footer className="fixed bottom-0 w-full border-t bg-muted/40 py-6">
-        <div className="text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} My App. All rights reserved.
-        </div>
-      </footer>
-    </>
+      <Footer />
+    </div>
   )
 }

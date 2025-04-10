@@ -1,0 +1,19 @@
+{
+  "name": "Shelfie",
+  "short_name": "Shelfie",
+  "icons": [
+    {
+      "src": "/favicon/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#FFF9F5",
+  "background_color": "#FFF9F5",
+  "display": "standalone"
+}
