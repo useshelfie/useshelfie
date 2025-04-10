@@ -69,3 +69,8 @@
 - description: Guidelines for writing terminal commands
   rules:
     - Use `pnpm` instead of `npm`
+
+# Commit Messages
+- description: Guidelines for writing commit messages
+  rules:
+    - Use Conventional Commit
