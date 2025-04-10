@@ -1,4 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card"
+import Image from "next/image"
 
 export function HowItWorks() {
   return (
@@ -17,7 +18,7 @@ export function HowItWorks() {
                   Upload images, videos, or even 3D models of your products with descriptions and details.
                 </p>
                 <div className="mt-6 flex-1 flex items-center justify-center">
-                  <img
+                  <Image
                     src="/placeholder.svg?height=200&width=300"
                     alt="Add products illustration"
                     className="max-w-full h-auto rounded-lg"
@@ -55,7 +56,7 @@ export function HowItWorks() {
                   Use AI to help write descriptions or automatically group products into logical collections.
                 </p>
                 <div className="mt-6 flex-1 flex items-center justify-center">
-                  <img
+                  <Image
                     src="/placeholder.svg?height=200&width=300"
                     alt="AI organization illustration"
                     className="max-w-full h-auto rounded-lg"
@@ -93,8 +94,10 @@ export function HowItWorks() {
                   Share your catalog link, export as PDF, or generate a video presentation for maximum impact.
                 </p>
                 <div className="mt-6 flex-1 flex items-center justify-center">
-                  <img
+                  <Image
                     src="/placeholder.svg?height=200&width=300"
+                    width={300}
+                    height={200}
                     alt="Share catalog illustration"
                     className="max-w-full h-auto rounded-lg"
                   />

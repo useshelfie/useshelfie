@@ -47,7 +47,7 @@ export function Testimonials() {
                     </svg>
                   ))}
                 </div>
-                <blockquote className="text-lg mb-6 flex-1">"{testimonial.quote}"</blockquote>
+                <blockquote className="text-lg mb-6 flex-1">&quot;{testimonial.quote}&quot;</blockquote>
                 <div className="flex items-center mt-auto">
                   <Avatar className="h-10 w-10 mr-3">
                     <AvatarImage
