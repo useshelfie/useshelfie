@@ -7,6 +7,7 @@ export const productSchema = z.object({
     .number({ invalid_type_error: "Price must be a number" })
     .positive({ message: "Price must be a positive number" })
     .finite(),
+  image_urls: z.array(z.string().url({ message: "Invalid image URL format" })).optional(),
 })
 
 export const productDatabaseSchema = z.object({

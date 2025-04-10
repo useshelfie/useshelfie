@@ -13,6 +13,7 @@ export type CreateProductFormState = {
     description?: string[]
     price?: string[]
     categories?: string[]
+    image_urls?: string[]
     database?: string[]
   }
   type: "error" | "success" | null
@@ -33,20 +34,28 @@ export async function createProductAction(
     redirect("/login")
   }
 
-  // 2. Extract Base Product Data
+  // 2. Extract Base Product Data & Image URLs
   const rawProductData = {
     name: formData.get("name"),
     description: formData.get("description"),
     price: formData.get("price"),
+    image_urls: formData.getAll("image_urls").filter((url) => typeof url === "string" && url.length > 0) as string[],
   }
 
   // Extract companyId from read-only field
   const companyId = formData.get("companyId")
-  console.log(companyId)
+  if (!companyId || typeof companyId !== "string") {
+    return {
+      message: "Missing or invalid Company ID.",
+      type: "error",
+    }
+  }
+  console.log("Company ID in action:", companyId)
 
-  // 3. Validate Base Product Data
+  // 3. Validate Base Product Data (including image URLs)
   const validatedProductFields = productSchema.safeParse(rawProductData)
   if (!validatedProductFields.success) {
+    console.error("Product Validation Errors:", validatedProductFields.error.flatten().fieldErrors)
     return {
       message: "Product validation failed.",
       errors: validatedProductFields.error.flatten().fieldErrors,
@@ -75,7 +84,7 @@ export async function createProductAction(
   // Doing it sequentially in a Server Action is simpler but not truly atomic.
   // If the category linking fails after product creation, the product will exist without categories.
 
-  // 5. Insert Product
+  // 5. Insert Product (with image_urls)
   const { data: newProduct, error: productInsertError } = await supabase
     .from("products")
     .insert({
