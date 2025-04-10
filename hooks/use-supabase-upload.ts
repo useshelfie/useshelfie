@@ -194,7 +194,7 @@ const useSupabaseUpload = (options: UseSupabaseUploadOptions) => {
     loading,
     errors, // Contains errors linked to original filenames
     setErrors, // Allow manual error setting if needed
-    onUpload,
+    startUpload: onUpload, // Rename onUpload to startUpload in the return object
     maxFileSize: maxFileSize,
     maxFiles: maxFiles,
     allowedMimeTypes,

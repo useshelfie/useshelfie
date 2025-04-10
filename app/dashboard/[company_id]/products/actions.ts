@@ -5,18 +5,20 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { productSchema } from "@/schemas/productSchema"
+import type { Product } from "@/types/product"
 
 export type CreateProductFormState = {
   message: string
+  type: "success" | "error" | null
   errors?: {
     name?: string[]
     description?: string[]
     price?: string[]
     categories?: string[]
-    image_urls?: string[]
+    image_links?: string[]
     database?: string[]
   }
-  type: "error" | "success" | null
+  newProduct?: Product
 }
 
 export async function createProductAction(
@@ -39,7 +41,7 @@ export async function createProductAction(
     name: formData.get("name"),
     description: formData.get("description"),
     price: formData.get("price"),
-    image_urls: formData.getAll("image_urls").filter((url) => typeof url === "string" && url.length > 0) as string[],
+    image_links: formData.getAll("image_links").filter((url) => typeof url === "string" && url.length > 0) as string[],
   }
 
   // Extract companyId from read-only field
@@ -84,7 +86,7 @@ export async function createProductAction(
   // Doing it sequentially in a Server Action is simpler but not truly atomic.
   // If the category linking fails after product creation, the product will exist without categories.
 
-  // 5. Insert Product (with image_urls)
+  // 5. Insert Product (with image_links)
   const { data: newProduct, error: productInsertError } = await supabase
     .from("products")
     .insert({

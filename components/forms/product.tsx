@@ -1,7 +1,7 @@
 // components/product-form.tsx
 "use client"
 
-import React, { useState, useEffect, useRef, useTransition, useActionState } from "react"
+import React, { useState, useEffect, useRef, useTransition, useActionState, startTransition } from "react"
 import { useFormStatus } from "react-dom"
 import { Loader2, PlusCircle, X } from "lucide-react"
 import Image from "next/image"
@@ -34,11 +34,11 @@ import { Dropzone, DropzoneContent, DropzoneEmptyState } from "@/components/drop
 // Types
 type Category = { id: string; name: string }
 
-// Extend FormState type locally to include image_urls errors temporarily
+// Extend FormState type locally to include image_links errors temporarily
 // The source type in actions.ts will be updated later
 type ProductFormStateWithErrorHandling = CreateProductFormState & {
   errors?: CreateProductFormState["errors"] & {
-    image_urls?: string[]
+    image_links?: string[]
   }
 }
 
@@ -65,6 +65,7 @@ export function ProductForm({ initialCategories }: { initialCategories: Category
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([])
   const [companyId, setCompanyId] = useState<string>("")
   const productFormRef = useRef<HTMLFormElement>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [productState, productFormAction] = useActionState(createProductAction, initialProductState)
 
   // --- Image Upload State & Hook ---
@@ -81,43 +82,60 @@ export function ProductForm({ initialCategories }: { initialCategories: Category
   const [uploadedImageUrls, setUploadedImageUrls] = useState<string[]>([])
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([])
 
+  // Handle Form Submission
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (isSubmitting) return
+    
+    setIsSubmitting(true)
+    try {
+      // Create FormData first
+      const formData = new FormData(e.currentTarget)
+      
+      // Upload any pending images
+      if (supabaseUpload.files.length > 0 && !supabaseUpload.isSuccess) {
+        await supabaseUpload.startUpload()
+      }
+      
+      // Submit the form with the FormData we created earlier
+      startTransition(async () => {
+        await productFormAction(formData)
+      })
+    } catch (error) {
+      console.error('Form submission error:', error)
+      toast.error('Failed to submit form')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   // Handle Form Submission Result (Success/Error Toasts)
   useEffect(() => {
-    // Explicitly cast productState here for type safety
-    const state = productState as ProductFormStateWithErrorHandling
-
-    if (state.type === "success") {
-      toast.success(state.message || "Product created successfully!")
-      productFormRef.current?.reset()
-      setSelectedCategories([])
-      supabaseUpload.setFiles([])
-      setUploadedImageUrls([])
-      setImagePreviewUrls([])
-      supabaseUpload.setErrors([])
-    } else if (state.type === "error") {
-      toast.error(state.message || "Failed to create product.")
-      console.error("Product Creation Error State:", state)
-      // Log specific errors if available
-      if (state.errors) {
-        console.error("Validation/Database Errors:", state.errors)
+    // Only show toast if we have a message and we're not submitting
+    if (productState.message && !isSubmitting) {
+      if (productState.type === "success") {
+        toast.success(productState.message)
+        productFormRef.current?.reset()
+        setSelectedCategories([])
+        supabaseUpload.setFiles([])
+        setUploadedImageUrls([])
+        setImagePreviewUrls([])
+        supabaseUpload.setErrors([])
+      } else if (productState.type === "error") {
+        toast.error(productState.message)
       }
     }
-  }, [productState, supabaseUpload])
+  }, [productState, isSubmitting])
 
   // Derive public URLs when upload succeeds
   useEffect(() => {
     if (supabaseUpload.isSuccess && supabaseUpload.successes.length > 0) {
       const publicUrls = supabaseUpload.successes.map((uploadedPath) => {
-        // The hook now returns the full path/name used in storage
         const { data } = createClient().storage.from("product-images").getPublicUrl(uploadedPath)
         return data.publicUrl
       })
       setUploadedImageUrls(publicUrls)
-      console.log("Uploaded Image Public URLs:", publicUrls)
-      // Optionally show a toast for successful uploads
-      toast.success(`${publicUrls.length} image(s) uploaded successfully!`)
     }
-    // Depend on the successes array identity to re-run when it changes
   }, [supabaseUpload.isSuccess, supabaseUpload.successes])
 
   // Create preview URLs for selected files
@@ -162,7 +180,7 @@ export function ProductForm({ initialCategories }: { initialCategories: Category
       <CardHeader>
         <CardTitle>Create New Product</CardTitle>
       </CardHeader>
-      <form ref={productFormRef} action={productFormAction} className="space-y-6">
+      <form ref={productFormRef} onSubmit={handleSubmit} className="space-y-6">
         <CardContent className="space-y-4">
           {/* Form Fields */}
           <Field
@@ -193,15 +211,15 @@ export function ProductForm({ initialCategories }: { initialCategories: Category
               Product Images (Max {supabaseUpload.maxFiles}, {formatBytes(supabaseUpload.maxFileSize)})
             </Label>
             {uploadedImageUrls.map((url, index) => (
-              <input key={index} type="hidden" name="image_urls" value={url} />
+              <input key={index} type="hidden" name="image_links" value={url} />
             ))}
             <Dropzone {...supabaseUpload} className={!companyId ? "pointer-events-none opacity-50" : ""}>
               <DropzoneContent />
               {supabaseUpload.files.length === 0 && <DropzoneEmptyState />}
             </Dropzone>
-            {(productState as ProductFormStateWithErrorHandling).errors?.image_urls && (
+            {(productState as ProductFormStateWithErrorHandling).errors?.image_links && (
               <div className="text-sm text-destructive mt-1">
-                {(productState as ProductFormStateWithErrorHandling).errors!.image_urls!.map((e: string) => (
+                {(productState as ProductFormStateWithErrorHandling).errors!.image_links!.map((e: string) => (
                   <p key={e}>{e}</p>
                 ))}
               </div>
@@ -275,11 +293,19 @@ export function ProductForm({ initialCategories }: { initialCategories: Category
           </div>
         </CardContent>
         <div className="px-6 pb-6">
-          <SubmitButton
-            pendingText="Creating Product..."
-            text="Create Product"
-            isPending={!companyId || supabaseUpload.loading}
-          />
+          <Button 
+            type="submit" 
+            disabled={isSubmitting || !companyId || supabaseUpload.loading}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating Product...
+              </>
+            ) : (
+              'Create Product'
+            )}
+          </Button>
           {companyId && <input readOnly type="hidden" name="companyId" value={companyId} />}
         </div>
       </form>
