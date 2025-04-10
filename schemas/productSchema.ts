@@ -7,6 +7,7 @@ export const productSchema = z.object({
     .number({ invalid_type_error: "Price must be a number" })
     .positive({ message: "Price must be a positive number" })
     .finite(),
+  image_links: z.array(z.string().url({ message: "Invalid image URL format" })).optional(),
 })
 
 export const productDatabaseSchema = z.object({
@@ -16,6 +17,7 @@ export const productDatabaseSchema = z.object({
   price: z.number(),
   created_at: z.string(),
   company_id: z.string(),
+  image_links: z.array(z.string()).optional(),
 })
 
 export type ProductFormData = z.infer<typeof productSchema>
