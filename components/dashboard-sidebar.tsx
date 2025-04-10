@@ -12,22 +12,25 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { headers } from "next/headers"
+import Link from "next/link"
+import { LogoutButton } from "./logout-button"
 
 // Menu items.
 const items = [
   {
     title: "Main",
-    url: "/dashboard/",
+    url: "/",
     icon: Home,
   },
   {
     title: "Products",
-    url: "/dashboard/products",
+    url: "/products",
     icon: Inbox,
   },
   {
     title: "Categories",
-    url: "/dashboard/categories",
+    url: "/categories",
     icon: Calendar,
   },
 ]
@@ -35,12 +38,12 @@ const items = [
 const systemItems = [
   {
     title: "Settings",
-    url: "/dashboard/settings",
+    url: "/settings",
     icon: Settings,
   },
   {
     title: "Search",
-    url: "/dashboard/search",
+    url: "/search",
     icon: Search,
   },
 ]
@@ -50,6 +53,8 @@ export async function DashboardSidebar() {
   const {
     data: { user },
   } = await supabase.auth.getUser()
+  const headerList = await headers()
+  const currentCompanyID = headerList.get("x-current-path")?.split("/")[2] // assume pathname is /dashboard/[company_id]
   return (
     <Sidebar>
       <SidebarHeader>
@@ -77,10 +82,10 @@ export async function DashboardSidebar() {
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <a href={item.url}>
+                    <Link href={`/dashboard/${currentCompanyID}${item.url}`}>
                       <item.icon />
                       <span>{item.title}</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -106,10 +111,12 @@ export async function DashboardSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <div>
+        <div className="border rounded-md p-4 border-zinc-300 flex flex-col gap-2">
           <p className="text-sm text-muted-foreground">
-            Logged in as: <strong className="font-medium text-foreground">{user?.email}</strong>
+            Logged in as:{" "}
+            <strong className="font-medium text-foreground">{user?.email ? user.email.split("@")[0] : "User"}</strong>
           </p>
+          <LogoutButton />
         </div>
       </SidebarFooter>
     </Sidebar>

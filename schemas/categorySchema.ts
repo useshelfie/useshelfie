@@ -8,4 +8,11 @@ export const categorySchema = z.object({
     .max(50, { message: "Category name too long" }),
 })
 
+export const categoryDatabaseSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  created_at: z.string(),
+  company_id: z.string(),
+})
+
 export type CategoryFormData = z.infer<typeof categorySchema>

@@ -5,15 +5,19 @@ import { Card } from "@/components/ui/card"
 import Link from "next/link"
 import Image from "next/image"
 import { Suspense } from "react"
-import { getCachedProducts } from "@/lib/data/cache"
+import { getProductsByCompanyId } from "@/lib/data/cache"
+import { headers } from "next/headers"
 
-export default function ProductsPage() {
+export default async function ProductsPage() {
+  const headerList = await headers()
+  const currentCompanyID = headerList.get("x-current-path")?.split("/")[2] // assume pathname is /dashboard/[company_id]
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold">Products</h1>
         <Button asChild>
-          <Link href="/dashboard/products/create" prefetch={true}>
+          <Link href={`/dashboard/${currentCompanyID}/products/create`} prefetch={true}>
             Add Product
           </Link>
         </Button>
@@ -48,17 +52,14 @@ function ProductSkeleton() {
 }
 
 async function ProductsList() {
-  const products = await getCachedProducts()
+  const products = await getProductsByCompanyId()
+  const headerList = await headers()
+  const currentCompanyID = headerList.get("x-current-path")?.split("/")[2] // assume pathname is /dashboard/[company_id]
 
   if (!products?.length) {
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground">No products found.</p>
-        <Button asChild className="mt-4">
-          <Link href="/dashboard/products/create" prefetch={true}>
-            Create your first product
-          </Link>
-        </Button>
       </div>
     )
   }
@@ -68,7 +69,7 @@ async function ProductsList() {
       {products.map((product) => (
         <Link
           key={product.id}
-          href={`/dashboard/products/${product.id}`}
+          href={`/dashboard/${currentCompanyID}/products/${product.id}`}
           className="block focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-lg"
           prefetch={true}>
           <Card className="h-full hover:shadow-md transition-shadow">

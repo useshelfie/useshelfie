@@ -9,4 +9,14 @@ export const productSchema = z.object({
     .finite(),
 })
 
+export const productDatabaseSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  price: z.number(),
+  created_at: z.string(),
+  company_id: z.string(),
+})
+
 export type ProductFormData = z.infer<typeof productSchema>
+export type ProductDatabaseData = z.infer<typeof productDatabaseSchema>

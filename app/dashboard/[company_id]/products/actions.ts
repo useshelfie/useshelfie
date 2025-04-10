@@ -4,16 +4,15 @@
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
-import { productSchema } from "@/schemas/productSchema" // Assuming this is still just name, desc, price
+import { productSchema } from "@/schemas/productSchema"
 
-// Define the shape of the state returned by the action
 export type CreateProductFormState = {
   message: string
   errors?: {
     name?: string[]
     description?: string[]
     price?: string[]
-    categories?: string[] // Add errors for categories
+    categories?: string[]
     database?: string[]
   }
   type: "error" | "success" | null
@@ -40,6 +39,10 @@ export async function createProductAction(
     description: formData.get("description"),
     price: formData.get("price"),
   }
+
+  // Extract companyId from read-only field
+  const companyId = formData.get("companyId")
+  console.log(companyId)
 
   // 3. Validate Base Product Data
   const validatedProductFields = productSchema.safeParse(rawProductData)
@@ -78,8 +81,9 @@ export async function createProductAction(
     .insert({
       ...validatedProductFields.data,
       user_id: user.id,
+      company_id: companyId,
     })
-    .select("id") // Get the ID of the newly created product
+    .select("id")
     .single()
 
   if (productInsertError || !newProduct) {
@@ -153,7 +157,7 @@ export async function createProductAction(
 
   // 7. Success
   console.log("Product created successfully:", validatedProductFields.data.name)
-  revalidatePath("/dashboard/products") // Revalidate product list page
+  revalidatePath(`/dashboard/${companyId}/products`) // Revalidate product list page
   // Don't redirect here, let the form handle success state
 
   return {
