@@ -2,9 +2,9 @@
 const nextConfig = {
   images: {
     domains: [
-      'bnsdtfdmbfhsmfscsojz.supabase.co', // Add your Supabase storage domain
+      "bnsdtfdmbfhsmfscsojz.supabase.co", // Add your Supabase storage domain
     ],
   },
 }
 
-module.exports = nextConfig 
+module.exports = nextConfig

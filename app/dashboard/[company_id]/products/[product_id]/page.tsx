@@ -7,17 +7,15 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { formatPrice } from "@/lib/utils"
 
-export default async function ProductPage({
-  params,
-}: {
-  params: { product_id: string; company_id: string }
-}) {
+export default async function ProductPage({ params }: { params: Promise<{ product_id: string; company_id: string }> }) {
   const supabase = await createClient()
-  
+  const { product_id, company_id } = await params
+
   // Fetch product with its categories
   const { data: product, error } = await supabase
     .from("products")
-    .select(`
+    .select(
+      `
       *,
       product_categories (
         category:categories (
@@ -25,8 +23,9 @@ export default async function ProductPage({
           name
         )
       )
-    `)
-    .eq("id", params.product_id)
+    `
+    )
+    .eq("id", product_id)
     .single()
 
   if (error || !product) {
@@ -35,15 +34,15 @@ export default async function ProductPage({
   }
 
   // Extract categories from the nested structure
-  const categories = product.product_categories
-    ?.map((pc: any) => pc.category)
-    .filter(Boolean) || []
+  const categories =
+    product.product_categories?.map((pc: { category: { id: string; name: string } }) => pc.category).filter(Boolean) ||
+    []
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
         {/* Back Button */}
-        <Link href={`/dashboard/${params.company_id}/products`}>
+        <Link href={`/dashboard/${company_id}/products`}>
           <Button variant="ghost" className="mb-6">
             <ChevronLeft className="h-4 w-4 mr-2" />
             Back to Products
@@ -92,17 +91,13 @@ export default async function ProductPage({
               <div className="space-y-6">
                 <div>
                   <h1 className="text-3xl font-bold">{product.name}</h1>
-                  <p className="text-2xl font-semibold mt-2 text-primary">
-                    {formatPrice(product.price)}
-                  </p>
+                  <p className="text-2xl font-semibold mt-2 text-primary">{formatPrice(product.price)}</p>
                 </div>
 
                 {product.description && (
                   <div>
                     <h2 className="text-lg font-semibold mb-2">Description</h2>
-                    <p className="text-muted-foreground whitespace-pre-wrap">
-                      {product.description}
-                    </p>
+                    <p className="text-muted-foreground whitespace-pre-wrap">{product.description}</p>
                   </div>
                 )}
 
@@ -113,8 +108,7 @@ export default async function ProductPage({
                       {categories.map((category: { id: string; name: string }) => (
                         <span
                           key={category.id}
-                          className="px-3 py-1 rounded-full bg-secondary text-secondary-foreground text-sm"
-                        >
+                          className="px-3 py-1 rounded-full bg-secondary text-secondary-foreground text-sm">
                           {category.name}
                         </span>
                       ))}

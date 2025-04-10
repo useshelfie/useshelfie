@@ -6,6 +6,7 @@ import { useFormStatus } from "react-dom"
 import { Loader2, PlusCircle, X } from "lucide-react"
 import Image from "next/image"
 import { toast } from "sonner"
+import { createClient } from "@/lib/supabase/client"
 
 // Shadcn UI Imports
 import { Button } from "@/components/ui/button"
@@ -86,24 +87,24 @@ export function ProductForm({ initialCategories }: { initialCategories: Category
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (isSubmitting) return
-    
+
     setIsSubmitting(true)
     try {
       // Create FormData first
       const formData = new FormData(e.currentTarget)
-      
+
       // Upload any pending images
       if (supabaseUpload.files.length > 0 && !supabaseUpload.isSuccess) {
         await supabaseUpload.startUpload()
       }
-      
+
       // Submit the form with the FormData we created earlier
       startTransition(async () => {
         await productFormAction(formData)
       })
     } catch (error) {
-      console.error('Form submission error:', error)
-      toast.error('Failed to submit form')
+      console.error("Form submission error:", error)
+      toast.error("Failed to submit form")
     } finally {
       setIsSubmitting(false)
     }
@@ -213,7 +214,10 @@ export function ProductForm({ initialCategories }: { initialCategories: Category
             {uploadedImageUrls.map((url, index) => (
               <input key={index} type="hidden" name="image_links" value={url} />
             ))}
-            <Dropzone {...supabaseUpload} className={!companyId ? "pointer-events-none opacity-50" : ""}>
+            <Dropzone
+              {...supabaseUpload}
+              className={!companyId ? "pointer-events-none opacity-50" : ""}
+              onUpload={supabaseUpload.startUpload}>
               <DropzoneContent />
               {supabaseUpload.files.length === 0 && <DropzoneEmptyState />}
             </Dropzone>
@@ -293,17 +297,14 @@ export function ProductForm({ initialCategories }: { initialCategories: Category
           </div>
         </CardContent>
         <div className="px-6 pb-6">
-          <Button 
-            type="submit" 
-            disabled={isSubmitting || !companyId || supabaseUpload.loading}
-          >
+          <Button type="submit" disabled={isSubmitting || !companyId || supabaseUpload.loading}>
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Creating Product...
               </>
             ) : (
-              'Create Product'
+              "Create Product"
             )}
           </Button>
           {companyId && <input readOnly type="hidden" name="companyId" value={companyId} />}
@@ -450,6 +451,3 @@ const formatBytes = (
   const i = size !== undefined ? sizes.indexOf(size) : Math.floor(Math.log(bytes) / Math.log(k))
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i]
 }
-
-// Need to import createClient for getPublicUrl
-import { createClient } from "@/lib/supabase/client"

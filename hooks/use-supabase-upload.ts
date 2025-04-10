@@ -1,6 +1,6 @@
-import { createClient } from '@/lib/supabase/client'
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { type FileError, type FileRejection, useDropzone } from 'react-dropzone'
+import { createClient } from "@/lib/supabase/client"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { type FileError, type FileRejection, useDropzone } from "react-dropzone"
 
 const supabase = createClient()
 
@@ -79,10 +79,15 @@ const useSupabaseUpload = (options: UseSupabaseUploadOptions) => {
 
   const isSuccess = useMemo(() => {
     // Determine overall success based on if all *attempted* files succeeded
-    const attemptedUploadCount = files.length; // Or filter based on files without initial errors?
+    const attemptedUploadCount = files.length // Or filter based on files without initial errors?
     // This logic might need refinement depending on desired "success" definition (e.g., partial success ok?)
     // For now, consider success if loading is done, no errors remain, and successes match files count.
-    return !loading && errors.length === 0 && successes.length > 0 && successes.length === files.filter(f => f.errors.length === 0).length;
+    return (
+      !loading &&
+      errors.length === 0 &&
+      successes.length > 0 &&
+      successes.length === files.filter((f) => f.errors.length === 0).length
+    )
   }, [errors.length, successes.length, files, loading])
 
   const onDrop = useCallback(
@@ -90,18 +95,18 @@ const useSupabaseUpload = (options: UseSupabaseUploadOptions) => {
       const validFiles = acceptedFiles
         .filter((file) => !files.find((x) => x.name === file.name))
         .map((file) => {
-          ; (file as FileWithPreview).preview = URL.createObjectURL(file)
-            ; (file as FileWithPreview).errors = []
+          ;(file as FileWithPreview).preview = URL.createObjectURL(file)
+          ;(file as FileWithPreview).errors = []
           return file as FileWithPreview
         })
 
       const invalidFiles = fileRejections.map(({ file, errors }) => {
-        ; (file as FileWithPreview).preview = URL.createObjectURL(file)
-          ; (file as FileWithPreview).errors = errors
+        ;(file as FileWithPreview).preview = URL.createObjectURL(file)
+        ;(file as FileWithPreview).errors = errors
         return file as FileWithPreview
       })
 
-      const newFiles = [...files, ...validFiles, ...invalidFiles].slice(0, maxFiles); // Enforce maxFiles limit
+      const newFiles = [...files, ...validFiles, ...invalidFiles].slice(0, maxFiles) // Enforce maxFiles limit
 
       setFiles(newFiles)
       // Clear successes/errors when new files are dropped
@@ -129,22 +134,20 @@ const useSupabaseUpload = (options: UseSupabaseUploadOptions) => {
 
     if (filesToUpload.length === 0) {
       setLoading(false)
-      return; // Nothing valid to upload
+      return // Nothing valid to upload
     }
 
     const responses = await Promise.all(
       filesToUpload.map(async (file): Promise<UploadResponse> => {
         // Generate unique name
-        const uniqueName = `${Date.now()}-${file.name.replace(/\\s+/g, '_')}`; // Replace spaces for safety
-        const uploadPath = !!path ? `${path}/${uniqueName}` : uniqueName;
+        const uniqueName = `${Date.now()}-${file.name.replace(/\\s+/g, "_")}` // Replace spaces for safety
+        const uploadPath = !!path ? `${path}/${uniqueName}` : uniqueName
 
         try {
-          const { error } = await supabase.storage
-            .from(bucketName)
-            .upload(uploadPath, file, {
-              cacheControl: cacheControl.toString(),
-              upsert,
-            })
+          const { error } = await supabase.storage.from(bucketName).upload(uploadPath, file, {
+            cacheControl: cacheControl.toString(),
+            upsert,
+          })
 
           if (error) {
             console.error(`Upload Error (${file.name}):`, error)
@@ -155,30 +158,29 @@ const useSupabaseUpload = (options: UseSupabaseUploadOptions) => {
           }
         } catch (catchError: any) {
           console.error(`Upload Exception (${file.name}):`, catchError)
-          return { originalName: file.name, error: catchError.message || 'An unexpected error occurred during upload.' }
+          return { originalName: file.name, error: catchError.message || "An unexpected error occurred during upload." }
         }
       })
     )
 
     // Process responses
     const responseErrors = responses
-      .filter((res): res is { originalName: string, error: string } => !!res.error)
-      .map(res => ({ name: res.originalName, message: res.error }));
+      .filter((res): res is { originalName: string; error: string } => !!res.error)
+      .map((res) => ({ name: res.originalName, message: res.error }))
 
     const responseSuccesses = responses
-      .filter((res): res is { originalName: string, uploadedPath: string } => !!res.uploadedPath)
-      .map(res => res.uploadedPath); // Store the final uploaded path
+      .filter((res): res is { originalName: string; uploadedPath: string } => !!res.uploadedPath)
+      .map((res) => res.uploadedPath) // Store the final uploaded path
 
     setErrors(responseErrors)
     setSuccesses(responseSuccesses)
     setLoading(false)
-
   }, [files, path, bucketName, cacheControl, upsert, maxFiles]) // Include maxFiles dependency
 
   useEffect(() => {
     // Cleanup previews on unmount
     return () => {
-      files.forEach(file => {
+      files.forEach((file) => {
         if (file.preview) {
           URL.revokeObjectURL(file.preview)
         }

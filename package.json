@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "next lint",
     "format": "prettier --write .",
-    "test": "echo 'Not implemented'"
+    "test": "echo 'Not implemented'",
+    "check-everything": "pnpm format && pnpm check-types && pnpm lint"
   },
   "dependencies": {
     "@ai-sdk/groq": "^1.2.5",
