@@ -1,4 +1,4 @@
-import { Calendar, GalleryVerticalEnd, Home, Inbox, Search, Settings } from "lucide-react"
+import { Calendar, GalleryVerticalEnd, Home, Inbox, Search, Settings, Library } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import {
   Sidebar,
@@ -32,6 +32,11 @@ const items = [
     title: "Categories",
     url: "/categories",
     icon: Calendar,
+  },
+  {
+    title: "Catalogs",
+    url: "/catalogs",
+    icon: Library,
   },
 ]
 

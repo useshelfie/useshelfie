@@ -1,0 +1,73 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+When you are getting/insterting from/into the database, check the tables first, and then determine what values should you use for your use case. 
+auth.user is not managable by you. do not try to change it. if you need some values set for user, use `profiles` table.
+
+**1. `profiles` Table**
+
+| Column Name | Data Type | Notes |
+|---|---|---|
+| `id` | `text` | Primary Key |
+| `username` | `text` |  |
+| `updated_at` | `timestamptz` |  |
+
+**2. `categories` Table**
+
+| Column Name | Data Type | Notes |
+|---|---|---|
+| `id` | `int8` | Primary Key |
+| `name` | `name` |  |
+| `user_id` | `uuid` | Foreign Key referencing `auth.users.id` |
+| `created_at` | `timestamptz` |  |
+| `company_id` | `int8` | Foreign Key referencing `companies.id` |
+
+**3. `product_categories` Table**
+
+| Column Name | Data Type | Notes |
+|---|---|---|
+| `product_id` | `uuid` | Foreign Key referencing `products.id` |
+| `category_id` | `int8` | Foreign Key referencing `categories.id` |
+
+**4. `products` Table**
+
+| Column Name | Data Type | Notes |
+|---|---|---|
+| `id` | `uuid` | Primary Key |
+| `user_id` | `uuid` | Foreign Key referencing `auth.users.id` |
+| `name` | `text` |  |
+| `description` | `text` |  |
+| `price` | `int8` |  |
+| `created_at` | `timestamptz` |  |
+| `company_id` | `int8` | Foreign Key referencing `companies.id` |
+| `image_links` | `text` |  |
+| `catalog_id` | `int8` | Foreign Key referencing `catalogs.id` |
+
+**5. `catalogs` Table**
+
+| Column Name | Data Type | Notes |
+|---|---|---|
+| `id` | `int8` | Primary Key |
+| `company_id` | `int8` | Foreign Key referencing `companies.id` |
+| `user_id` | `uuid` | Foreign Key referencing `auth.users.id` |
+| `name` | `text` |  |
+| `created_at` | `timestamptz` |  |
+| `updated_at` | `timestamptz` |  |
+
+**6. `companies` Table**
+
+| Column Name | Data Type | Notes |
+|---|---|---|
+| `id` | `int8` | Primary Key |
+| `owner_id` | `uuid` | Foreign Key referencing `auth.users.id` |
+| `name` | `text` |  |
+| `three_words` | `text` |  |
+| `created_at` | `timestamptz` |  |
+
+**7. `auth.users` Table**
+
+| Column Name | Data Type | Notes |
+|---|---|---|
+| `id` | `uuid` | Primary Key (referenced by Foreign Keys in other tables) |

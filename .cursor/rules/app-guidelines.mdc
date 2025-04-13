@@ -1,9 +1,4 @@
----
-description: 
-globs: 
-alwaysApply: true
----
- # Shelfie App Guidelines
+# Shelfie App Guidelines
 
 ## Tech Stack
 
@@ -72,10 +67,10 @@ alwaysApply: true
 ### File Structure
 ```
 app/
+├── components/     # Reusable UI components
+├── lib/           # Utilities and configurations
 ├── (routes)/      # Next.js app router pages
 └── globals.css    # Global styles
-components/        # Reusable UI components
-lib/               # Utilities and configurations
 ```
 
 ### Component Guidelines
@@ -88,6 +83,7 @@ lib/               # Utilities and configurations
 
 2. **Data Fetching**
    - Use Server Components for initial data fetch
+   - Implement caching with `lib/data/cache`
    - Handle loading states with Suspense
 
 3. **Error Handling**
@@ -171,6 +167,8 @@ lib/               # Utilities and configurations
    - Performance impact
    - Accessibility compliance
    - Security considerations
+   - Test coverage
+   - Documentation updates
 
 ### Documentation
 1. **Code Documentation**
@@ -181,4 +179,4 @@ lib/               # Utilities and configurations
 2. **Architecture Documentation**
    - Update diagrams when needed
    - Document new patterns
-   - Maintain changelog
+   - Maintain changelog 
