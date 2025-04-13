@@ -4,15 +4,17 @@ import { CategoryList } from "./_components/category-list"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CreateCategoryForm } from "@/components/forms/category"
 import { Suspense } from "react"
-import { getCategoriesByCompanyID } from "@/lib/data/cache"
+import { getCategoriesByCompany } from "@/lib/data/cache"
 
-export default function CategoriesDashboardPage() {
+export default function CategoriesDashboardPage({ params }: { params: { company_id: string } }) {
+  const companyId = params.company_id
+
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
       <h1 className="text-2xl font-semibold">Manage Categories</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <CreateCategoryForm />
+        <CreateCategoryForm companyId={companyId} />
 
         <Card>
           <CardHeader>
@@ -29,7 +31,7 @@ export default function CategoriesDashboardPage() {
                   ))}
                 </div>
               }>
-              <CategoriesWrapper />
+              <CategoriesWrapper companyId={companyId} />
             </Suspense>
           </CardContent>
         </Card>
@@ -38,8 +40,8 @@ export default function CategoriesDashboardPage() {
   )
 }
 
-async function CategoriesWrapper() {
-  const categories = await getCategoriesByCompanyID()
+async function CategoriesWrapper({ companyId }: { companyId: string }) {
+  const categories = await getCategoriesByCompany(companyId)
 
   if (!categories?.length) {
     return (

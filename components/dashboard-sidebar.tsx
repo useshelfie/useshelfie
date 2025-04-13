@@ -12,7 +12,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { headers } from "next/headers"
+// import { headers } from "next/headers" // No longer needed
 import Link from "next/link"
 import { LogoutButton } from "./logout-button"
 
@@ -53,20 +53,30 @@ const systemItems = [
   },
 ]
 
-export async function DashboardSidebar() {
+// Add companyId prop
+export async function DashboardSidebar({ companyId }: { companyId: string }) {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  const headerList = await headers()
-  const currentCompanyID = headerList.get("x-current-path")?.split("/")[2] // assume pathname is /dashboard/[company_id]
+  // const headerList = await headers()
+  // const currentCompanyID = headerList.get("x-current-path")?.split("/")[2] // No longer needed
+
+  // Validate companyId (basic check)
+  if (!companyId) {
+    console.error("DashboardSidebar: companyId is missing!")
+    // Optionally return a fallback UI or null
+    return null
+  }
+
   return (
     <Sidebar>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <a href="#">
+              {/* Consider making the logo link to the specific company dashboard or a general dashboard home */}
+              <Link href={`/dashboard/${companyId}`}>
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                   <GalleryVerticalEnd className="size-4" />
                 </div>
@@ -74,7 +84,7 @@ export async function DashboardSidebar() {
                   <span className="font-semibold">Shelfie</span>
                   <span className="">v1.0.0</span>
                 </div>
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -87,7 +97,8 @@ export async function DashboardSidebar() {
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <Link href={`/dashboard/${currentCompanyID}${item.url}`}>
+                    {/* Use the companyId prop for links */}
+                    <Link href={`/dashboard/${companyId}${item.url}`}>
                       <item.icon />
                       <span>{item.title}</span>
                     </Link>
@@ -104,7 +115,9 @@ export async function DashboardSidebar() {
               {systemItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <a href={item.url}>
+                    {/* Update system links if they need company context */}
+                    {/* Example: <Link href={`/dashboard/${companyId}${item.url}`}> */}
+                    <a href={item.url}> { /* Assuming these are general for now */ }
                       <item.icon />
                       <span>{item.title}</span>
                     </a>
@@ -116,7 +129,7 @@ export async function DashboardSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <div className="border rounded-md p-4 border-zinc-300 flex flex-col gap-2">
+        <div className="border rounded-md p-4 border-border flex flex-col gap-2">
           <p className="text-sm text-muted-foreground">
             Logged in as:{" "}
             <strong className="font-medium text-foreground">{user?.email ? user.email.split("@")[0] : "User"}</strong>

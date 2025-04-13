@@ -1,18 +1,19 @@
 import { createClient } from "@/lib/supabase/server"
-import { headers } from "next/headers"
+// import { headers } from "next/headers" // No longer needed here
 
 interface DashboardStats {
   productsCount: number
   categoriesCount: number
 }
 
-export async function getCategoriesByCompanyID() {
-  try {
-    // get company id from the url header
-    const headerList = await headers()
-    const pathname = headerList.get("x-current-path")
-    const currentCompanyID = pathname?.split("/")[2] // assume pathname is /dashboard/[company_id]
+// Renamed for clarity and added companyId parameter
+export async function getCategoriesByCompany(companyId: string) {
+  if (!companyId) {
+    console.error("No company ID provided to getCategoriesByCompany")
+    return []
+  }
 
+  try {
     // create client
     const supabase = await createClient()
 
@@ -20,28 +21,29 @@ export async function getCategoriesByCompanyID() {
     const { data: categories, error } = await supabase
       .from("categories")
       .select("*")
-      .eq("company_id", currentCompanyID)
+      .eq("company_id", companyId)
       .order("created_at", { ascending: false })
 
     if (error) {
-      console.error("Error fetching categories:", error)
-      return []
+      console.error(`Error fetching categories for company ${companyId}:`, error)
+      return [] // Consider throwing or returning error
     }
 
     return categories || []
   } catch (err) {
-    console.error("Cache execution error:", err)
-    return []
+    console.error(`Execution error in getCategoriesByCompany for company ${companyId}:`, err)
+    return [] // Consider throwing or returning error
   }
 }
 
-export async function getProductsByCompanyId() {
-  try {
-    // get company id from the url header
-    const headerList = await headers()
-    const pathname = headerList.get("x-current-path")
-    const currentCompanyID = pathname?.split("/")[2] // assume pathname is /dashboard/[company_id]
+// Renamed for clarity and added companyId parameter
+export async function getProductsByCompany(companyId: string) {
+  if (!companyId) {
+    console.error("No company ID provided to getProductsByCompany")
+    return []
+  }
 
+  try {
     // create client
     const supabase = await createClient()
 
@@ -49,42 +51,54 @@ export async function getProductsByCompanyId() {
     const { data: products, error } = await supabase
       .from("products")
       .select("*, categories(*)")
-      .eq("company_id", currentCompanyID)
+      .eq("company_id", companyId)
       .order("created_at", { ascending: false })
 
     if (error) {
-      console.error("Error fetching products:", error)
-      return []
+      console.error(`Error fetching products for company ${companyId}:`, error)
+      return [] // Consider throwing or returning error
     }
 
     return products || []
   } catch (err) {
-    console.error("Execution error:", err)
-    return []
+    console.error(`Execution error in getProductsByCompany for company ${companyId}:`, err)
+    return [] // Consider throwing or returning error
   }
 }
 
-export async function fetchDashboardStatsByCompanyId(): Promise<DashboardStats> {
+// Renamed for clarity and added companyId parameter
+export async function fetchDashboardStatsByCompany(companyId: string): Promise<DashboardStats> {
+  if (!companyId) {
+    console.error("No company ID provided to fetchDashboardStatsByCompany")
+    // Return a default/error state or throw
+    return { productsCount: 0, categoriesCount: 0 }
+  }
+
   try {
     const supabase = await createClient()
-    // Fetch the current url from x-current-path header
-    const headerList = await headers()
-    const pathname = headerList.get("x-current-path")
-    const currentCompanyID = pathname?.split("/")[2] // assume pathname is /dashboard/[company_id]
-    if (!currentCompanyID) {
-      console.error("No company ID found in the URL")
-      return { productsCount: -1, categoriesCount: -1 }
-    }
-    const [{ count: productsCount }, { count: categoriesCount }] = await Promise.all([
-      supabase.from("products").select("*", { count: "exact", head: true }).eq("company_id", currentCompanyID),
-      supabase.from("categories").select("*", { count: "exact", head: true }).eq("company_id", currentCompanyID),
+
+    // Use Promise.all to fetch counts concurrently
+    const [productsResult, categoriesResult] = await Promise.all([
+      supabase.from("products").select("*", { count: "exact", head: true }).eq("company_id", companyId),
+      supabase.from("categories").select("*", { count: "exact", head: true }).eq("company_id", companyId),
     ])
+
+    // Handle potential errors from individual queries
+    if (productsResult.error) {
+      console.error(`Error fetching product count for company ${companyId}:`, productsResult.error)
+    }
+    if (categoriesResult.error) {
+      console.error(`Error fetching category count for company ${companyId}:`, categoriesResult.error)
+    }
+
     return {
-      productsCount: productsCount || 0,
-      categoriesCount: categoriesCount || 0,
+      productsCount: productsResult.count || 0,
+      categoriesCount: categoriesResult.count || 0,
     }
   } catch (error) {
-    console.error("Failed to fetch dashboard stats:", error)
+    console.error(`Failed to fetch dashboard stats for company ${companyId}:`, error)
+    // Return a default/error state or throw
     return { productsCount: 0, categoriesCount: 0 }
   }
 }
+

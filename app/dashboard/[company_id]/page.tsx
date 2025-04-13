@@ -1,13 +1,13 @@
 import { Suspense } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { fetchDashboardStatsByCompanyId } from "@/lib/data/cache"
+import { fetchDashboardStatsByCompany } from "@/lib/data/cache"
 
-export default function Dashboard() {
+export default function Dashboard({ params }: { params: { company_id: string } }) {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-2xl font-semibold mb-8">Dashboard Overview</h1>
       <Suspense fallback={<DashboardSkeleton count={2} />}>
-        <DashboardStats />
+        <DashboardStats companyId={params.company_id} />
       </Suspense>
     </div>
   )
@@ -31,8 +31,8 @@ function DashboardSkeleton({ count }: { count: number }) {
   )
 }
 
-async function DashboardStats() {
-  const stats = await fetchDashboardStatsByCompanyId()
+async function DashboardStats({ companyId }: { companyId: string }) {
+  const stats = await fetchDashboardStatsByCompany(companyId)
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

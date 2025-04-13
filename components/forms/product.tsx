@@ -60,11 +60,10 @@ function SubmitButton({ pendingText, text, isPending }: { pendingText: string; t
 }
 
 // --- Product Form Component ---
-export function ProductForm({ initialCategories }: { initialCategories: Category[] }) {
+export function ProductForm({ initialCategories, companyId }: { initialCategories: Category[]; companyId: string }) {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
   const [availableCategories, setAvailableCategories] = useState<Category[]>(initialCategories)
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([])
-  const [companyId, setCompanyId] = useState<string>("")
   const productFormRef = useRef<HTMLFormElement>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [productState, productFormAction] = useActionState(createProductAction, initialProductState)
@@ -148,16 +147,6 @@ export function ProductForm({ initialCategories }: { initialCategories: Category
       newPreviewUrls.forEach((url) => URL.revokeObjectURL(url))
     }
   }, [supabaseUpload.files])
-
-  // Set companyId from url
-  useEffect(() => {
-    const pathname = window.location.pathname
-    const companyId = pathname.split("/")[2]
-    if (companyId) {
-      setCompanyId(companyId)
-      console.log("Company ID for upload path:", companyId)
-    }
-  }, [])
 
   // Toggle category selection
   const toggleCategory = (category: Category) =>
@@ -409,14 +398,13 @@ function CreateCategoryInlineForm({
         <DialogDescription>Enter a name for the new category.</DialogDescription>
       </DialogHeader>
 
-      {/* --- REMOVE ALERT COMPONENT BELOW --- */}
+      {/* --- REMOVE ALERT COMPONENT BELOW (Already commented out, remove fully) --- */}
       {/* {state.message && state.type && (
         <Alert variant={state.type === "error" ? "destructive" : "default"}>
           <AlertTitle>{state.type === "error" ? "Error" : "Success"}</AlertTitle>
           <AlertDescription>{state.message}</AlertDescription>
         </Alert>
       )} */}
-      {/* --- END REMOVE ALERT COMPONENT --- */}
 
       <Field
         label="Category Name"

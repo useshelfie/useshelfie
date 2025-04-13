@@ -4,10 +4,16 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import DashboardNavigationBar from "@/components/dashboard-navigation-bar"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default function DashboardLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode
+  params: { company_id: string }
+}) {
   return (
     <SidebarProvider>
-      <DashboardSidebar />
+      <DashboardSidebar companyId={params.company_id} />
       <SidebarInset>
         <DashboardNavigationBar />
         <Suspense

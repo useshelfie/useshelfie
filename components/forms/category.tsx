@@ -1,6 +1,6 @@
 "use client"
 import { useFormStatus } from "react-dom"
-import { useRef, useEffect, useActionState, useState } from "react"
+import { useRef, useEffect, useActionState /*, useState */ } from "react"
 import { Loader2, Terminal } from "lucide-react"
 import { createCategoryAction, CreateCategoryFormState } from "@/app/dashboard/[company_id]/categories/actions"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,12 +21,13 @@ function SubmitButton() {
   )
 }
 
-export function CreateCategoryForm() {
+// Add companyId prop
+export function CreateCategoryForm({ companyId }: { companyId: string }) {
   const [state, formAction] = useActionState(createCategoryAction, initialState)
   const formRef = useRef<HTMLFormElement>(null)
 
-  // handle companyId
-  const [companyId, setCompanyId] = useState<string>("")
+  // Remove state and effect for deriving companyId from URL
+  // const [companyId, setCompanyId] = useState<string>("")
 
   useEffect(() => {
     if (state.type === "success") {
@@ -35,11 +36,7 @@ export function CreateCategoryForm() {
     }
   }, [state])
 
-  useEffect(() => {
-    const pathname = window.location.pathname
-    const _companyId = pathname.split("/")[2] // Assuming the URL is like /dashboard/companyId
-    setCompanyId(_companyId)
-  }, [])
+  // Removed useEffect for setting companyId from pathname
 
   return (
     <Card>
@@ -68,6 +65,7 @@ export function CreateCategoryForm() {
         <CardFooter>
           <SubmitButton />
         </CardFooter>
+        {/* Use the companyId prop for the hidden input */}
         <input readOnly type="hidden" name="companyId" value={companyId} />
       </form>
     </Card>

@@ -2,6 +2,7 @@ import { SidebarTrigger } from "./ui/sidebar"
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import CompanyChooser from "./company-chooser"
+import { getUserCompanyDetails } from "@/lib/data/companies"
 
 export default async function DashboardNavigationBar() {
   // Create supabase client
@@ -13,32 +14,24 @@ export default async function DashboardNavigationBar() {
     error: authError,
   } = await supabase.auth.getUser()
 
-  // Check for errors
+  // Check for errors or missing user
   if (authError || !user) {
     console.error("Authentication error:", authError)
     redirect("/auth/login")
   }
 
-  // Get user ID
-  const userId = user.id
+  // Use the new function to get company details
+  const { data: companies, error: companyError } = await getUserCompanyDetails(user.id)
 
-  // Get user companies
-  const { data: companies, error: companyError } = await supabase
-    .from("companies")
-    .select("*")
-    .eq("owner_id", userId)
-    .order("created_at", { ascending: false })
-
-  // Check for errors
+  // Check for errors during company fetch
   if (companyError) {
     console.error("Company retrieval error:", companyError)
-    redirect("/auth/login")
+    redirect("/dashboard")
   }
 
-  // Check if user has companies
-  // That is theoritically not possible, but sitll checking
+  // Check if user has companies (should ideally not happen if they reached the dashboard)
   if (!companies || companies.length === 0) {
-    console.error("No companies found for user:", userId)
+    console.warn("No companies found for user in DashboardNavigationBar:", user.id)
     redirect("/dashboard/company/create")
   }
 

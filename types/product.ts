@@ -5,6 +5,7 @@ export type Product = {
   description?: string
   price: number
   created_at: string
-  company_id: string
+  company_id: number
   image_links?: string[]
+  catalog_id?: number | null
 }

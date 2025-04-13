@@ -1,10 +1,10 @@
 "use server"
 import { createClient } from "@/lib/supabase/server"
-import { CompanyFormData } from "@/schemas/companySchema"
+import { companyFormSchema, CompanySupabaseData } from "@/schemas/companySchema"
 
 export async function createCompany(data: {
   companyName: string
-}): Promise<{ success: boolean; message: string; data: CompanyFormData | null }> {
+}): Promise<{ success: boolean; message: string; data: CompanySupabaseData | null }> {
   // Create supabase client
   const supabase = await createClient()
 
@@ -25,36 +25,42 @@ export async function createCompany(data: {
   console.log(`Creating company for user: ${userId}`)
   console.log("Company Name received:", data.companyName)
 
-  // Validate company name
-  // since company name is not unique to the user, we don't need to check for duplicates
-  if (!data.companyName || data.companyName.trim().length < 2) {
-    return { success: false, message: "Company name must be at least 2 characters.", data: null }
+  // Validate company name using Zod schema
+  const validation = companyFormSchema.safeParse({ name: data.companyName })
+  if (!validation.success) {
+    const firstError = validation.error.errors[0]?.message || "Invalid company name."
+    return { success: false, message: firstError, data: null }
   }
 
-  // Inserting new company into the database and updating the user's profile
+  // Inserting new company into the database
   try {
     const newCompany = {
       owner_id: userId,
-      name: data.companyName,
+      name: validation.data.name, // Use validated name from schema parse result
     }
-    const { data: companyData, error: companyError } = await supabase.from("companies").insert(newCompany).select()
+    // Select all fields matching CompanySupabaseData
+    const { data: companyData, error: companyError } = await supabase
+      .from("companies")
+      .insert(newCompany)
+      .select("id, name, owner_id, three_words, created_at") // Explicitly select fields
+      .single() // Expecting a single row back
 
-    // Check for errors
-    if (companyError) {
-      console.error("Company creation error:", companyError)
+    // Check for errors during insert/select
+    if (companyError || !companyData) {
+      console.error("Company creation/selection error:", companyError)
       return { success: false, message: "Failed to create company. Please try again.", data: null }
     }
 
-    console.log("Company creation successful.", companyData[0])
-    // FIXME not safe to use type conversion through unkown, but it is a temp fix
+    console.log("Company creation successful.", companyData)
+    // Return the fetched data directly, no unsafe assertion needed
     return {
       success: true,
       message: "Company created successfully!",
-      data: companyData[0] as unknown as CompanyFormData,
+      data: companyData, // Type now matches the promise signature
     }
   } catch (error) {
-    console.error("Company creation return an error:", error)
-    return { success: false, message: "Failed to create company. Please try again.", data: null }
+    console.error("Company creation error:", error)
+    return { success: false, message: "An unexpected error occurred. Please try again.", data: null }
   }
 }
 

@@ -1,6 +1,6 @@
 "use client" // Mark as a client component
 
-import { CompanySupabaseData } from "@/schemas/companySchema"
+// import { CompanySupabaseData } from "@/schemas/companySchema" // No longer needed for props
 import { Avatar, AvatarFallback } from "./ui/avatar"
 import { PlusIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -8,8 +8,14 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
+// Define a simpler interface matching the fetched data
+interface CompanyChooserProps {
+  id: number // Assuming company.id is a number based on schema
+  name: string
+}
+
 interface Props {
-  companies: CompanySupabaseData[]
+  companies: CompanyChooserProps[] // Use the simpler interface
 }
 
 export default function CompanyChooser({ companies }: Props) {
@@ -21,7 +27,7 @@ export default function CompanyChooser({ companies }: Props) {
   useEffect(() => {
     if (!pathname) return // Wait for pathname to be available
 
-    console.log("Current pathname:", pathname) // Debug log
+    // console.log("Current pathname:", pathname) // Debug log
 
     // Check if the path starts with '/dashboard/'
     if (pathname.startsWith("/dashboard/")) {
@@ -29,7 +35,7 @@ export default function CompanyChooser({ companies }: Props) {
       const companyId = pathParts[0] // First segment after /dashboard/
       const remainingPath = pathParts.slice(1).join("/") // Rest of the path
 
-      console.log("Parsed - companyId:", companyId, "pathAfterCompany:", remainingPath) // Debug log
+      // console.log("Parsed - companyId:", companyId, "pathAfterCompany:", remainingPath) // Debug log
 
       setCurrentCompanyId(companyId)
       setPathAfterCompany(remainingPath)
@@ -42,30 +48,34 @@ export default function CompanyChooser({ companies }: Props) {
 
   return (
     <div className="flex gap-2 items-center">
-      {/* Create Link */}
+      {/* Create Link - Adjusted href to point to company creation */}
       <Link
-        href={`/dashboard/create${pathAfterCompany ? `/${pathAfterCompany}` : ""}`}
-        className="cursor-pointer rounded-full border-dashed border-2 flex items-center p-3 hover:bg-zinc-200 transition-all duration-200">
+        href={`/dashboard/company/create`}
+        className="cursor-pointer rounded-full border-dashed border-2 flex items-center p-3 hover:bg-muted transition-all duration-200">
         <PlusIcon />
       </Link>
 
       {/* Company Links */}
       {companies.map((company) => {
-        const isCurrent = currentCompanyId === String(company.id) // Ensure type consistency
+        // Comparison uses String() as currentCompanyId is from URL path (string)
+        const isCurrent = currentCompanyId === String(company.id)
         const href = `/dashboard/${company.id}${pathAfterCompany ? `/${pathAfterCompany}` : ""}`
 
-        console.log(`Company ${company.id}: isCurrent=${isCurrent}, href=${href}`) // Debug log
+        // console.log(`Company ${company.id}: isCurrent=${isCurrent}, href=${href}`) // Debug log
 
         return (
           <Link
             href={href}
             className={cn(
-              "cursor-pointer border-1 border-zinc-300 p-2 px-2 pr-4 flex gap-2 items-center rounded-full hover:bg-zinc-200 transition-all duration-200",
-              isCurrent ? "bg-zinc-200" : ""
+              "cursor-pointer border border-border p-2 px-2 pr-4 flex gap-2 items-center rounded-full hover:bg-muted transition-all duration-200",
+              isCurrent ? "bg-muted" : ""
             )}
             key={company.id}>
             <Avatar>
-              <AvatarFallback className="bg-black text-white">{company.name[0]}</AvatarFallback>
+              {/* Use company.name, ensure it's not empty */}
+              <AvatarFallback>
+                {company.name ? company.name[0].toUpperCase() : "?"}
+              </AvatarFallback>
             </Avatar>
             <div className="text-center">{company.name}</div>
           </Link>

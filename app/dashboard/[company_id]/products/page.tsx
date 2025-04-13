@@ -5,19 +5,17 @@ import { Card } from "@/components/ui/card"
 import Link from "next/link"
 import Image from "next/image"
 import { Suspense } from "react"
-import { getProductsByCompanyId } from "@/lib/data/cache"
-import { headers } from "next/headers"
+import { getProductsByCompany } from "@/lib/data/cache"
 
-export default async function ProductsPage() {
-  const headerList = await headers()
-  const currentCompanyID = headerList.get("x-current-path")?.split("/")[2] // assume pathname is /dashboard/[company_id]
+export default async function ProductsPage({ params }: { params: { company_id: string } }) {
+  const companyId = params.company_id
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold">Products</h1>
         <Button asChild>
-          <Link href={`/dashboard/${currentCompanyID}/products/create`} prefetch={true}>
+          <Link href={`/dashboard/${companyId}/products/create`} prefetch={true}>
             Add Product
           </Link>
         </Button>
@@ -31,7 +29,7 @@ export default async function ProductsPage() {
             ))}
           </div>
         }>
-        <ProductsList />
+        <ProductsList companyId={companyId} />
       </Suspense>
     </div>
   )
@@ -51,10 +49,8 @@ function ProductSkeleton() {
   )
 }
 
-async function ProductsList() {
-  const products = await getProductsByCompanyId()
-  const headerList = await headers()
-  const currentCompanyID = headerList.get("x-current-path")?.split("/")[2] // assume pathname is /dashboard/[company_id]
+async function ProductsList({ companyId }: { companyId: string }) {
+  const products = await getProductsByCompany(companyId)
 
   if (!products?.length) {
     return (
@@ -69,16 +65,16 @@ async function ProductsList() {
       {products.map((product) => (
         <Link
           key={product.id}
-          href={`/dashboard/${currentCompanyID}/products/${product.id}`}
+          href={`/dashboard/${companyId}/products/${product.id}`}
           className="block focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-lg"
           prefetch={true}>
           <Card className="h-full hover:shadow-md transition-shadow">
             <div className="p-4">
               <div className="aspect-square relative mb-4 rounded-md overflow-hidden bg-gray-100 dark:bg-gray-800">
-                {product.image_url ? (
+                {product.image_links && product.image_links.length > 0 ? (
                   <div className="relative w-full h-full">
                     <Image
-                      src={product.image_url}
+                      src={product.image_links[0]}
                       alt={product.name}
                       fill
                       className="object-cover"
@@ -95,15 +91,18 @@ async function ProductsList() {
                 )}
               </div>
               <h3 className="font-medium mb-1 line-clamp-1">{product.name}</h3>
-              <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
+              {product.description && (
+                <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
+              )}
               <div className="mt-2 flex gap-2 flex-wrap">
-                {product.categories?.map((category: { name: string; id: string }) => (
-                  <span
-                    key={category.id}
-                    className="inline-block px-2 py-1 text-xs rounded-full bg-gray-100 dark:bg-gray-800">
-                    {category.name}
-                  </span>
-                ))}
+                {Array.isArray(product.categories) &&
+                  product.categories?.map((category: { name: string; id: number }) => (
+                    <span
+                      key={category.id}
+                      className="inline-block px-2 py-1 text-xs rounded-full bg-gray-100 dark:bg-gray-800">
+                      {category.name}
+                    </span>
+                  ))}
               </div>
             </div>
           </Card>
