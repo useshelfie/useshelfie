@@ -9,6 +9,7 @@ import type { Product } from "@/types/product"
 import { getAuthenticatedUser, handleActionError, type ActionState } from "@/lib/actions/helpers" // Import helpers
 import { ZodError } from "zod"
 import { SupabaseClient } from '@supabase/supabase-js'; // Import SupabaseClient type
+import { v4 as uuidv4 } from 'uuid'; // For generating unique names
 
 // Define specific errors for this action state, extending the generic ActionState
 export type ProductActionStateErrors = {
@@ -25,32 +26,115 @@ export type ProductFormState = ActionState<Pick<Product, 'id'> | undefined, Prod
 
 export type DeleteProductState = ActionState<undefined, { database?: string[] }>;
 
-// --- Helper: Validate Product Form Data ---
-function validateProductForm(formData: FormData): { success: true; data: Omit<Product, 'id' | 'user_id' | 'company_id' | 'created_at' | 'catalog_id'> } |
-{ success: false; state: ProductFormState } {
+// --- Helper: Upload Images to Supabase Storage (Server-Side) ---
+async function uploadImagesToServer(supabase: SupabaseClient, files: File[], companyId: string, bucketName: string = "product-images"): Promise<{ uploadedUrls: string[], errors: { name: string, message: string }[] }> {
+  const uploadedUrls: string[] = [];
+  const errors: { name: string, message: string }[] = [];
+
+  if (!companyId) {
+    console.error("Cannot upload images without companyId");
+    return { uploadedUrls, errors: [{ name: "general", message: "Company ID is missing." }] };
+  }
+
+  await Promise.all(files.map(async (file) => {
+    const uniqueFileName = `${uuidv4()}-${file.name.replace(/\s+/g, '_')}`;
+    const filePath = `${companyId}/products/${uniqueFileName}`; // Organize by company/products
+
+    try {
+      const { data, error: uploadError } = await supabase.storage
+        .from(bucketName)
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: urlData } = supabase.storage.from(bucketName).getPublicUrl(filePath);
+      if (urlData?.publicUrl) {
+        uploadedUrls.push(urlData.publicUrl);
+      } else {
+        throw new Error("Failed to get public URL after upload.");
+      }
+    } catch (error: any) {
+      console.error(`Failed to upload ${file.name}:`, error);
+      errors.push({ name: file.name, message: error.message || "Upload failed." });
+    }
+  }));
+
+  return { uploadedUrls, errors };
+}
+
+// --- Helper: Delete Images from Supabase Storage (Server-Side) ---
+async function deleteImagesFromServer(supabase: SupabaseClient, urlsToDelete: string[], bucketName: string = "product-images"): Promise<{ errors: { url: string, message: string }[] }> {
+  const errors: { url: string, message: string }[] = [];
+  if (urlsToDelete.length === 0) {
+    return { errors };
+  }
+
+  // Extract paths from URLs
+  const pathsToDelete = urlsToDelete.map(url => {
+    try {
+      const urlParts = new URL(url);
+      // Assumes URL format like: https://<project>.supabase.co/storage/v1/object/public/<bucket>/<path>
+      // Adjust the split index based on your actual URL structure
+      const path = urlParts.pathname.split(`/${bucketName}/`)[1];
+      if (!path) throw new Error("Could not extract path from URL");
+      return path;
+    } catch (e: any) {
+      console.error(`Error parsing URL or extracting path from ${url}: ${e.message}`);
+      errors.push({ url, message: `Invalid URL format or path extraction failed: ${e.message}` });
+      return null; // Mark as invalid
+    }
+  }).filter((path): path is string => path !== null); // Filter out invalid paths
+
+  if (pathsToDelete.length > 0) {
+    console.log("Attempting to delete paths:", pathsToDelete);
+    const { data, error: deleteError } = await supabase.storage
+      .from(bucketName)
+      .remove(pathsToDelete);
+
+    if (deleteError) {
+      console.error("Error deleting files from storage:", deleteError);
+      // Add a general error, or try to map specific file errors if the API provides them
+      errors.push({ url: "multiple", message: `Storage deletion failed: ${deleteError.message}` });
+    } else {
+      console.log("Successfully deleted paths:", data);
+    }
+  }
+
+  return { errors };
+}
+
+// --- Helper: Validate Product Form Data (excluding image_links) ---
+function validateProductForm(formData: FormData): { success: true; data: Omit<Product, 'id' | 'user_id' | 'company_id' | 'created_at' | 'catalog_id' | 'image_links'> } |
+{ success: false; state: Omit<ProductFormState, 'data'> } { // Exclude data field on error state
   const rawData = {
     name: formData.get("name"),
     description: formData.get("description"),
     price: formData.get("price"),
-    // Ensure image_links are handled correctly (as array of strings)
-    image_links: formData.getAll("image_links").filter((url): url is string => typeof url === "string" && url.length > 0),
+    // image_links are no longer validated here, they come from server upload
   };
 
-  const validatedFields = productSchema.safeParse(rawData);
+  // Use a partial schema for validation, excluding image_links
+  const partialProductSchema = productSchema.omit({ image_links: true });
+  const validatedFields = partialProductSchema.safeParse(rawData);
 
   if (!validatedFields.success) {
-    console.error("Product Validation Errors:", validatedFields.error.flatten().fieldErrors);
+    console.error("Product Validation Errors (excluding images):", validatedFields.error.flatten().fieldErrors);
     return {
       success: false,
       state: {
         message: "Product validation failed.",
-        errors: validatedFields.error.flatten().fieldErrors,
+        errors: validatedFields.error.flatten().fieldErrors as ProductActionStateErrors, // Cast to specific error type
         type: "error",
       }
     };
   }
   // Type assertion needed as schema includes fields not directly from form here
-  return { success: true, data: validatedFields.data as any };
+  return { success: true, data: validatedFields.data };
 }
 
 // --- Placeholder Storage Actions ---
@@ -87,7 +171,7 @@ export async function createProductAction(
   const supabase = await createClient()
   const user = await getAuthenticatedUser(supabase)
 
-  // 1. Validate Base Product Data
+  // 1. Validate Base Product Data (excluding images)
   const validationResult = validateProductForm(formData);
   if (!validationResult.success) return validationResult.state;
   const productData = validationResult.data;
@@ -97,7 +181,7 @@ export async function createProductAction(
   if (!companyId || typeof companyId !== "string") {
     return { message: "Missing or invalid Company ID.", type: "error", errors: { database: ["Missing or invalid Company ID."] } }
   }
-  const companyIdNum = parseInt(companyId, 10); // Assuming company_id is number
+  const companyIdNum = parseInt(companyId, 10);
   if (isNaN(companyIdNum)) {
     return { message: "Invalid Company ID format.", type: "error", errors: { database: ["Invalid Company ID format."] } }
   }
@@ -116,38 +200,64 @@ export async function createProductAction(
     }
   }
 
+  // 4. Extract Image Files
+  const imageFiles = formData.getAll('new_images').filter((file): file is File => file instanceof File && file.size > 0);
+  const MAX_IMAGES = 5; // Define max images allowed
+  if (imageFiles.length > MAX_IMAGES) {
+    return {
+      message: `Too many images selected. Maximum allowed is ${MAX_IMAGES}.`,
+      type: "error",
+      errors: { image_links: [`Maximum ${MAX_IMAGES} images allowed.`] }
+    }
+  }
+
   // --- Database Operations ---
-  // Consider wrapping in a transaction (DB function) for atomicity
   try {
-    // 4. Insert Product
+    // 5. Upload Images (if any)
+    let uploadedImageUrls: string[] = [];
+    if (imageFiles.length > 0) {
+      const uploadResult = await uploadImagesToServer(supabase, imageFiles, companyId);
+      if (uploadResult.errors.length > 0) {
+        // Handle upload errors - return state with image-specific errors
+        const errorMessages = uploadResult.errors.map(e => `${e.name}: ${e.message}`);
+        return {
+          message: "Some images failed to upload.",
+          type: "error",
+          errors: { image_links: errorMessages }
+        }
+      }
+      uploadedImageUrls = uploadResult.uploadedUrls;
+    }
+
+    // 6. Insert Product with Uploaded Image URLs
     const { data: newProduct, error: productInsertError } = await supabase
       .from("products")
       .insert({
         ...productData,
         user_id: user.id,
-        company_id: companyIdNum, // Use parsed number
+        company_id: companyIdNum,
+        image_links: uploadedImageUrls.length > 0 ? uploadedImageUrls : undefined, // Add the uploaded URLs
       })
       .select("id")
       .single()
 
-    if (productInsertError) throw productInsertError; // Throw to be caught below
+    if (productInsertError) throw productInsertError;
     if (!newProduct) throw new Error("Failed to create product or retrieve ID.");
     const newProductId = newProduct.id;
 
-    // 5. Link Categories (if any)
+    // 7. Link Categories (if any)
     if (numericCategoryIds.length > 0) {
       const { data: validCategories, error: categoryCheckError } = await supabase
         .from("categories")
         .select("id")
         .eq("user_id", user.id)
-        .eq("company_id", companyIdNum) // Also check company ID for safety
+        .eq("company_id", companyIdNum)
         .in("id", numericCategoryIds)
 
       if (categoryCheckError) {
         console.error("Error verifying categories:", categoryCheckError)
-        // Don't throw, but return error state as product exists but categories failed
         return {
-          message: `Product created, but failed to verify categories: ${categoryCheckError.message}`,
+          message: `Product created (ID: ${newProductId}), but failed to verify categories: ${categoryCheckError.message}`,
           type: "error",
           errors: { database: [`Failed to verify categories: ${categoryCheckError.message}`] }
         }
@@ -155,22 +265,19 @@ export async function createProductAction(
 
       const validCategoryIds = validCategories?.map((c) => c.id) ?? [];
       const categoriesToLink = numericCategoryIds
-        .filter((id) => validCategoryIds.includes(id)) // Only link valid, owned categories
+        .filter((id) => validCategoryIds.includes(id))
         .map((catId) => ({ product_id: newProductId, category_id: catId }))
 
       if (categoriesToLink.length !== numericCategoryIds.length) {
-        // Some selected categories were not valid/owned
         console.warn("Some selected categories were invalid or not owned by the user.")
-        // Decide if this is an error or just proceed linking the valid ones
       }
 
       if (categoriesToLink.length > 0) {
         const { error: linkError } = await supabase.from("product_categories").insert(categoriesToLink)
         if (linkError) {
           console.error("Supabase Category Link Error:", linkError)
-          // Don't throw, return error state
           return {
-            message: `Product created, but failed to link categories: ${linkError.message}`,
+            message: `Product created (ID: ${newProductId}), but failed to link categories: ${linkError.message}`,
             type: "error",
             errors: { database: [`Failed to link categories: ${linkError.message}`] }
           }
@@ -178,18 +285,17 @@ export async function createProductAction(
       }
     }
 
-    // 6. Success
+    // 8. Success
     revalidatePath(`/dashboard/${companyIdNum}/products`)
 
     return {
       message: `Product "${productData.name}" created successfully!`,
       type: "success",
-      data: { id: newProductId } // Return new product ID
+      data: { id: newProductId }
     }
 
   } catch (error: any) {
-    // Use the shared error handler
-    return handleActionError(error, "Failed to create product due to a database error.");
+    return handleActionError(error, "Failed to create product due to a database or storage error.");
   }
 }
 
@@ -202,22 +308,22 @@ export async function updateProductAction(
   const supabase = await createClient()
   const user = await getAuthenticatedUser(supabase)
 
-  // 1. Validate Base Product Data
+  // 1. Validate Base Product Data (excluding images)
   const validationResult = validateProductForm(formData);
   if (!validationResult.success) return validationResult.state;
   const productData = validationResult.data;
 
-  // 2. Extract Company ID (Should be consistent with the product being updated)
-  const companyIdStr = formData.get("companyId")
-  if (!companyIdStr || typeof companyIdStr !== "string") {
+  // 2. Extract Company ID (Unchanged)
+  const companyId = formData.get("companyId")
+  if (!companyId || typeof companyId !== "string") {
     return { message: "Missing or invalid Company ID.", type: "error", errors: { database: ["Missing or invalid Company ID."] } }
   }
-  const companyIdNum = parseInt(companyIdStr, 10);
+  const companyIdNum = parseInt(companyId, 10);
   if (isNaN(companyIdNum)) {
     return { message: "Invalid Company ID format.", type: "error", errors: { database: ["Invalid Company ID format."] } }
   }
 
-  // 3. Extract and Validate Category IDs
+  // 3. Extract and Validate Category IDs (Unchanged)
   const categoryIds = formData
     .getAll("category_ids")
     .filter((id): id is string => typeof id === "string" && id.length > 0);
@@ -231,100 +337,110 @@ export async function updateProductAction(
     }
   }
 
-  // Extract image data from FormData
+  // 4. Extract Image Data from FormData
   const existingImageUrls = formData.getAll('existing_image_urls').filter((url): url is string => typeof url === 'string');
   const imagesToDelete = formData.getAll('images_to_delete').filter((url): url is string => typeof url === 'string');
   const newImageFiles = formData.getAll('new_images').filter((file): file is File => file instanceof File && file.size > 0);
 
-  // --- Database Operations (Ideally a Transaction/DB Function) ---
+  // --- Database & Storage Operations ---
   try {
-    // 4. Fetch existing product and its categories for comparison and auth check
+    // 5. Fetch existing product and check ownership
     const { data: existingProductData, error: fetchError } = await supabase
       .from('products')
-      .select(`
-                id,
-                company_id,
-                user_id,
-                product_categories ( category_id ),
-                image_links
-            `)
+      .select('id, user_id, company_id, image_links, product_categories ( category_id )')
       .eq('id', productId)
       .single();
 
-    if (fetchError) throw new Error("Failed to fetch existing product data.");
+    if (fetchError) throw fetchError;
     if (!existingProductData) throw new Error("Product not found.");
-    if (existingProductData.user_id !== user.id) {
+    if (existingProductData.user_id !== user.id || existingProductData.company_id !== companyIdNum) {
       return handleActionError({}, "You do not have permission to update this product.");
     }
-    if (existingProductData.company_id !== companyIdNum) {
-      return handleActionError({}, "Company ID mismatch.");
+
+    const currentImageLinks = existingProductData.image_links || [];
+
+    // 6. Delete Images Marked for Deletion
+    const deletionResult = await deleteImagesFromServer(supabase, imagesToDelete);
+    if (deletionResult.errors.length > 0) {
+      const errorMessages = deletionResult.errors.map(e => `URL ${e.url}: ${e.message}`);
+      // Don't block update, but report errors
+      console.warn("Image deletion errors:", errorMessages);
+      // Optionally add to the state to inform the user non-critically?
     }
 
-    const existingCategoryIds = existingProductData.product_categories.map(pc => pc.category_id);
+    // 7. Upload New Images
+    let newUploadedUrls: string[] = [];
+    const MAX_TOTAL_IMAGES = 5;
+    const remainingSlots = MAX_TOTAL_IMAGES - (currentImageLinks.length - imagesToDelete.length);
 
-    // 5. Handle Image Deletions from Storage
-    const deletePromises = imagesToDelete.map(url => deleteProductImage(supabase, url));
-    await Promise.all(deletePromises);
+    if (newImageFiles.length > remainingSlots) {
+      return {
+        message: `Cannot add ${newImageFiles.length} new images. Maximum total images allowed is ${MAX_TOTAL_IMAGES}. You have ${currentImageLinks.length - imagesToDelete.length} existing images remaining.`, // More informative message
+        type: "error",
+        errors: { image_links: [`Maximum ${MAX_TOTAL_IMAGES} total images allowed.`] }
+      }
+    }
 
-    // 6. Handle Image Uploads to Storage
-    const uploadPromises = newImageFiles.map(file => uploadProductImage(supabase, file, productId));
-    const newImageUrls = await Promise.all(uploadPromises);
+    if (newImageFiles.length > 0) {
+      const uploadResult = await uploadImagesToServer(supabase, newImageFiles, companyId);
+      if (uploadResult.errors.length > 0) {
+        const errorMessages = uploadResult.errors.map(e => `${e.name}: ${e.message}`);
+        return {
+          message: "Some new images failed to upload. Product not updated.",
+          type: "error",
+          errors: { image_links: errorMessages }
+        }
+      }
+      newUploadedUrls = uploadResult.uploadedUrls;
+    }
 
-    // 7. Construct Final Image Links Array
-    const finalImageLinks = existingImageUrls
-      .filter(url => !imagesToDelete.includes(url)) // Remove deleted URLs
-      .concat(newImageUrls); // Add newly uploaded URLs
+    // 8. Determine Final Image List
+    const finalImageLinks = [
+      ...currentImageLinks.filter((url: string) => !imagesToDelete.includes(url)), // Added type to url
+      ...newUploadedUrls // Add newly uploaded
+    ];
 
-    // 8. Update Product Details (including the final image_links)
+    // 9. Update Product Data
     const { error: productUpdateError } = await supabase
       .from("products")
-      .update({
-        ...productData, // name, description, price
-        image_links: finalImageLinks // Update image links
-      })
-      .eq("id", productId);
+      .update({ ...productData, image_links: finalImageLinks })
+      .eq("id", productId)
+      .eq("user_id", user.id) // Ensure ownership again
 
     if (productUpdateError) throw productUpdateError;
 
-    // 9. Update Category Links
-    const categoriesToAdd = newNumericCategoryIds.filter(id => !existingCategoryIds.includes(id));
-    const categoriesToRemove = existingCategoryIds.filter(id => !newNumericCategoryIds.includes(id));
+    // 10. Update Categories (Handle additions and deletions)
+    const existingCategoryIds = existingProductData.product_categories?.map(pc => pc.category_id) || [];
+    const idsToAdd = newNumericCategoryIds.filter(id => !existingCategoryIds.includes(id));
+    const idsToRemove = existingCategoryIds.filter(id => !newNumericCategoryIds.includes(id));
 
-    if (categoriesToRemove.length > 0) {
-      const { error: deleteLinkError } = await supabase
-        .from('product_categories')
+    // Link new categories
+    if (idsToAdd.length > 0) {
+      const categoriesToLink = idsToAdd.map(catId => ({ product_id: productId, category_id: catId }));
+      const { error: linkError } = await supabase.from("product_categories").insert(categoriesToLink);
+      if (linkError) {
+        // Log error but don't necessarily fail the whole update
+        console.error(`Failed to link new categories: ${linkError.message}`);
+        // Potentially return a partial success/warning message
+      }
+    }
+
+    // Unlink removed categories
+    if (idsToRemove.length > 0) {
+      const { error: unlinkError } = await supabase
+        .from("product_categories")
         .delete()
-        .eq('product_id', productId)
-        .in('category_id', categoriesToRemove);
-      if (deleteLinkError) {
-        console.error("Error removing category links:", deleteLinkError);
-        // Decide how to handle partial failure - maybe log and continue?
+        .eq("product_id", productId)
+        .in("category_id", idsToRemove);
+      if (unlinkError) {
+        // Log error
+        console.error(`Failed to unlink categories: ${unlinkError.message}`);
       }
     }
 
-    if (categoriesToAdd.length > 0) {
-      // Optional: Verify categoriesToAdd belong to the user/company first
-      const categoriesToLink = categoriesToAdd.map(catId => ({ product_id: productId, category_id: catId }));
-      const { error: addLinkError } = await supabase
-        .from('product_categories')
-        .insert(categoriesToLink);
-      if (addLinkError) {
-        console.error("Error adding category links:", addLinkError);
-        // Decide how to handle partial failure
-        // Maybe return specific error state here?
-        return {
-          message: `Product updated, but failed to link some categories: ${addLinkError.message}`,
-          type: "error",
-          errors: { database: [`Failed to link categories: ${addLinkError.message}`] }
-        }
-      }
-    }
-
-    // 10. Revalidate & Success
+    // 11. Success
     revalidatePath(`/dashboard/${companyIdNum}/products`)
     revalidatePath(`/dashboard/${companyIdNum}/products/${productId}`) // Revalidate specific product page
-    // Revalidate categories pages if needed?
-    revalidatePath(`/dashboard/${companyIdNum}/categories`)
 
     return {
       message: `Product "${productData.name}" updated successfully!`,
@@ -333,7 +449,7 @@ export async function updateProductAction(
     }
 
   } catch (error: any) {
-    return handleActionError(error, "Failed to update product due to a database error.");
+    return handleActionError(error, "Failed to update product due to a database or storage error.");
   }
 }
 

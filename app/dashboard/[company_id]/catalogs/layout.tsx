@@ -1,6 +1,6 @@
 "use client"; // Make this a client component
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react'; // Removed useState
 import Link from 'next/link';
 import { useParams } from 'next/navigation'; // Use client-side hook for params
 import { createClient } from '@/lib/supabase/client'; // Use client-side Supabase client
@@ -10,7 +10,6 @@ import { type CatalogDatabaseData } from "@/schemas/catalogSchema"; // Import ty
 import { DndContext, PointerSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { useDroppable } from '@dnd-kit/core';
 import { Skeleton } from '@/components/ui/skeleton'; // For loading state
-import { updateProductCatalog } from '@/lib/data/catalogs'; // Need this for DND update
 import { toast } from 'sonner';
 import { updateProductCatalogAction } from './actions'; // We need a server action for DND update
 import { useCatalogStore } from "@/stores/catalogStore"; // Import the store
@@ -20,12 +19,14 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable"; // Import Resizable components
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'; // Import React Query hooks
 
 // --- CatalogSidebarNav Component ---
 interface CatalogSidebarNavProps {
     companyId: number;
-    catalogs: CatalogDatabaseData[];
+    catalogs: CatalogDatabaseData[] | undefined; // Can be undefined while loading
     isLoading: boolean;
+    isError: boolean; // Added isError prop
 }
 
 function CatalogDroppableItem({ catalog, companyId }: { catalog: CatalogDatabaseData; companyId: number }) {
@@ -33,7 +34,8 @@ function CatalogDroppableItem({ catalog, companyId }: { catalog: CatalogDatabase
         id: `catalog-drop-${catalog.id}`,
         data: { // Pass catalog data for the onDragEnd handler
             type: 'catalog',
-            catalogId: catalog.id
+            catalogId: catalog.id,
+            catalogName: catalog.name // Pass name for toast message
         }
     });
 
@@ -59,7 +61,7 @@ function CatalogDroppableItem({ catalog, companyId }: { catalog: CatalogDatabase
     )
 }
 
-function CatalogSidebarNav({ companyId, catalogs, isLoading }: CatalogSidebarNavProps) {
+function CatalogSidebarNav({ companyId, catalogs, isLoading, isError }: CatalogSidebarNavProps) { // Added isError
     return (
         <nav className="mt-4">
             <div className="flex justify-between items-center mb-2 px-2">
@@ -77,10 +79,13 @@ function CatalogSidebarNav({ companyId, catalogs, isLoading }: CatalogSidebarNav
                         </li>
                     ))
                 )}
-                {!isLoading && catalogs.map(catalog => (
+                {isError && !isLoading && ( // Show error message
+                    <li className="px-2 text-red-500 text-sm">Failed to load catalogs.</li>
+                )}
+                {!isLoading && !isError && catalogs && catalogs.map(catalog => (
                     <CatalogDroppableItem key={catalog.id} catalog={catalog} companyId={companyId} />
                 ))}
-                {!isLoading && catalogs.length === 0 && (
+                {!isLoading && !isError && catalogs && catalogs.length === 0 && (
                     <li className="px-2 text-gray-500 text-sm">No catalogs yet.</li>
                 )}
             </ul>
@@ -94,29 +99,68 @@ export default function CatalogLayout({ children }: { children: React.ReactNode 
     const companyIdStr = Array.isArray(params.company_id) ? params.company_id[0] : params.company_id;
     const companyId = parseInt(companyIdStr || '0', 10);
 
-    const [catalogs, setCatalogs] = useState<CatalogDatabaseData[]>([]);
-    const [isLoadingCatalogs, setIsLoadingCatalogs] = useState(true);
-    const [errorCatalogs, setErrorCatalogs] = useState<string | null>(null);
-
     const supabase = createClient(); // Get client instance
+    const queryClient = useQueryClient(); // Get Query Client instance
     const triggerCatalogProductRefetch = useCatalogStore((state: CatalogState) => state.triggerCatalogProductRefetch);
 
-    // Fetch catalogs on component mount
+    // Fetch catalogs using useQuery
+    const {
+        data: catalogsData,
+        isLoading: isLoadingCatalogs,
+        isError: isErrorCatalogs,
+        error: errorCatalogs // Can use this for more detailed error logging if needed
+    } = useQuery({
+        queryKey: ['catalogs', companyId], // Query key includes companyId
+        queryFn: async () => {
+            if (!companyId) return []; // Return empty if companyId is invalid
+            // Ensure getCatalogsByCompany is compatible or wrap it
+            // Assuming getCatalogsByCompany returns Promise<CatalogDatabaseData[]>
+             const data = await getCatalogsByCompany(supabase, companyId);
+             // React Query handles errors, but we can log here if needed
+             // console.log("Fetched catalogs:", data);
+             return data;
+        },
+        enabled: !!companyId && companyId > 0, // Only run query if companyId is valid
+        staleTime: 1000 * 60 * 5, // Keep data fresh for 5 minutes
+    });
+
+    // Log error if exists
     useEffect(() => {
-        if (!companyId) return;
-        setIsLoadingCatalogs(true);
-        getCatalogsByCompany(supabase, companyId)
-            .then(data => {
-                setCatalogs(data);
-                setErrorCatalogs(null);
-            })
-            .catch(err => {
-                console.error("Failed to fetch catalogs:", err);
-                setErrorCatalogs("Failed to load catalogs.");
-                setCatalogs([]); // Clear catalogs on error
-            })
-            .finally(() => setIsLoadingCatalogs(false));
-    }, [companyId, supabase]); // Re-fetch if companyId changes
+        if (errorCatalogs) {
+             console.error("Failed to fetch catalogs:", errorCatalogs);
+        }
+    }, [errorCatalogs]);
+
+
+    // Mutation for updating product catalog
+    const updateProductCatalogMutation = useMutation({
+        mutationFn: async ({ productId, newCatalogId }: { productId: string; newCatalogId: number }) => {
+            // Call the server action
+            return updateProductCatalogAction(productId, newCatalogId);
+        },
+        onSuccess: (result, variables) => {
+            const { newCatalogId } = variables;
+            const productName = queryClient.getQueryData<CatalogDatabaseData[]>(['catalogs', companyId])
+                                ?.find(c => c.id === newCatalogId)?.name || 'Unknown Catalog'; // Get name from cache
+
+            if (result.type === 'success') {
+                toast.success(`Product moved to catalog '${productName}'.`);
+                // Invalidate catalog query to ensure sidebar is up-to-date if needed (though it doesn't change here)
+                // queryClient.invalidateQueries({ queryKey: ['catalogs', companyId] });
+                // Trigger refetch for product lists (assuming child components handle this)
+                triggerCatalogProductRefetch();
+            } else {
+                toast.error(result.message || "Failed to move product.", {
+                    description: result.errors?.database?.[0]
+                });
+            }
+        },
+        onError: (error) => {
+            console.error("Failed to update product catalog via mutation:", error);
+            toast.error("An unexpected error occurred while moving the product.");
+        },
+    });
+
 
     // DND Sensors
     const sensors = useSensors(
@@ -124,42 +168,27 @@ export default function CatalogLayout({ children }: { children: React.ReactNode 
         useSensor(KeyboardSensor)
     );
 
-    // DND Drag End Handler
+    // DND Drag End Handler - Updated to use mutation
     async function handleDragEnd(event: DragEndEvent) {
         const { active, over } = event;
 
-        // Check if we are dragging a product over a catalog in the sidebar
         if (over && active.data.current?.type === 'product' && over.data.current?.type === 'catalog') {
             const productId = active.id as string;
-            const oldCatalogId = active.data.current?.catalogId; // Get origin catalog ID from draggable item
+            const oldCatalogId = active.data.current?.catalogId;
             const newCatalogId = over.data.current?.catalogId as number;
-            const productName = active.data.current?.productName || 'Product';
+            // const productName = active.data.current?.productName || 'Product'; // Use cached catalog name instead
 
             if (oldCatalogId === newCatalogId) {
                 console.log("Product dropped in the same catalog.");
-                return; // No change needed
+                return;
             }
 
             console.log(`Moving product ${productId} from catalog ${oldCatalogId} to ${newCatalogId}`);
 
-            // Call server action to update the database
-            try {
-                 const result = await updateProductCatalogAction(productId, newCatalogId);
-                 if (result.type === 'success') {
-                     toast.success(`'${productName}' moved to catalog '${catalogs.find(c=>c.id === newCatalogId)?.name}'.`);
-                     // Trigger refetch on success - This should refetch the products in the specific catalog page
-                     triggerCatalogProductRefetch();
-                 } else {
-                     toast.error(result.message, {
-                         description: result.errors?.database?.[0]
-                     });
-                 }
-            } catch (error) {
-                 console.error("Failed to update product catalog via action:", error);
-                 toast.error("Failed to move product.");
-            }
+            // Call the mutation
+            updateProductCatalogMutation.mutate({ productId, newCatalogId });
         }
-        // TODO: Add logic for dragging a product *out* of a catalog (e.g., to an "unassigned" area)
+        // TODO: Add logic for dragging a product *out* of a catalog
     }
 
     if (isNaN(companyId) || companyId <= 0) {
@@ -176,8 +205,13 @@ export default function CatalogLayout({ children }: { children: React.ReactNode 
                     {/* Sidebar Area */}
                     <div className="flex h-full flex-col items-start justify-start p-4">
                         <h1 className="text-xl font-bold mb-4">Catalogs</h1>
-                        {errorCatalogs && <p className="text-red-500 text-sm">{errorCatalogs}</p>}
-                        <CatalogSidebarNav companyId={companyId} catalogs={catalogs} isLoading={isLoadingCatalogs} />
+                        {/* Pass React Query state to sidebar */}
+                        <CatalogSidebarNav
+                            companyId={companyId}
+                            catalogs={catalogsData}
+                            isLoading={isLoadingCatalogs}
+                            isError={isErrorCatalogs}
+                        />
                     </div>
                 </ResizablePanel>
                 <ResizableHandle withHandle />

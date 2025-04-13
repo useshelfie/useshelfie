@@ -1,12 +1,13 @@
 // components/product-form.tsx
 "use client"
 
-import React, { useState, useEffect, useRef, useTransition, useActionState, startTransition } from "react"
+import React, { useState, useEffect, useRef, useTransition, useActionState, startTransition, useCallback } from "react"
 import { useFormStatus } from "react-dom"
-import { Loader2, PlusCircle, X } from "lucide-react"
+import { Loader2, PlusCircle, X, Image as ImageIcon, UploadCloud } from "lucide-react"
 import Image from "next/image"
 import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
+import { useDropzone, type FileRejection, type FileError } from 'react-dropzone';
 
 // Shadcn UI Imports
 import { Button } from "@/components/ui/button"
@@ -25,27 +26,27 @@ import {
 import { Badge } from "@/components/ui/badge"
 
 // Actions & Contexts
-import { createProductAction, CreateProductFormState } from "@/app/dashboard/[company_id]/products/actions"
-import { createCategoryAction, CreateCategoryFormState } from "@/app/dashboard/[company_id]/categories/actions"
-
-// Hooks & Components
-import { useSupabaseUpload } from "@/hooks/use-supabase-upload"
-import { Dropzone, DropzoneContent, DropzoneEmptyState } from "@/components/dropzone"
+import { createProductAction, ProductFormState } from "@/app/dashboard/[company_id]/products/actions"
+import { createCategoryAction, CategoryFormState } from "@/app/dashboard/[company_id]/categories/actions"
 
 // Types
 type Category = { id: string; name: string }
 
 // Extend FormState type locally to include image_links errors temporarily
-// The source type in actions.ts will be updated later
-type ProductFormStateWithErrorHandling = CreateProductFormState & {
-  errors?: CreateProductFormState["errors"] & {
+type ProductFormStateWithErrorHandling = ProductFormState & {
+  errors?: ProductFormState["errors"] & {
     image_links?: string[]
   }
 }
 
+// Interface for File with Preview
+interface FileWithPreview extends File {
+  preview: string;
+}
+
 // Initial States
-const initialProductState: CreateProductFormState = { message: "", type: null }
-const initialCategoryState: CreateCategoryFormState = { message: "", type: null }
+const initialProductState: ProductFormState = { message: "", type: null }
+const initialCategoryState: CategoryFormState = { message: "", type: null }
 
 // --- Shared Submit Button Component ---
 function SubmitButton({ pendingText, text, isPending }: { pendingText: string; text: string; isPending?: boolean }) {
@@ -65,88 +66,103 @@ export function ProductForm({ initialCategories, companyId }: { initialCategorie
   const [availableCategories, setAvailableCategories] = useState<Category[]>(initialCategories)
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([])
   const productFormRef = useRef<HTMLFormElement>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [productState, productFormAction] = useActionState(createProductAction, initialProductState)
 
-  // --- Image Upload State & Hook ---
-  const supabaseUpload = useSupabaseUpload({
-    bucketName: "product-images",
-    allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/gif"],
-    maxFileSize: 1024 * 1024 * 5,
-    maxFiles: 5,
-    path: companyId ? `${companyId}/products` : undefined,
-    upsert: false,
-  })
+  // --- New Image Handling State ---
+  const [newImageFiles, setNewImageFiles] = useState<FileWithPreview[]>([]);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
-  // Public URLs of successfully uploaded images
-  const [uploadedImageUrls, setUploadedImageUrls] = useState<string[]>([])
-  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([])
+  // Constants for Upload
+  const MAX_FILES = 5;
+  const MAX_FILE_SIZE = 1024 * 1024 * 5; // 5MB
+  const ALLOWED_MIME_TYPES = {
+    'image/jpeg': [],
+    'image/png': [],
+    'image/webp': [],
+    'image/gif': [],
+  };
 
-  // Handle Form Submission
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    if (isSubmitting) return
+  // --- Dropzone Hook Setup ---
+  const onDrop = useCallback((acceptedFiles: File[], fileRejections: FileRejection[]) => {
+    const currentFiles = newImageFiles;
+    const totalFilesAfterAdd = currentFiles.length + acceptedFiles.length;
 
-    setIsSubmitting(true)
-    try {
-      // Create FormData first
-      const formData = new FormData(e.currentTarget)
-
-      // Upload any pending images
-      if (supabaseUpload.files.length > 0 && !supabaseUpload.isSuccess) {
-        await supabaseUpload.startUpload()
-      }
-
-      // Submit the form with the FormData we created earlier
-      startTransition(async () => {
-        await productFormAction(formData)
-      })
-    } catch (error) {
-      console.error("Form submission error:", error)
-      toast.error("Failed to submit form")
-    } finally {
-      setIsSubmitting(false)
+    if (totalFilesAfterAdd > MAX_FILES) {
+        toast.error(`Cannot add more files. Maximum is ${MAX_FILES}.`);
+        // Only add files up to the limit
+        const filesToAddCount = MAX_FILES - currentFiles.length;
+        acceptedFiles = acceptedFiles.slice(0, filesToAddCount);
     }
-  }
+
+    const newAcceptedFiles = acceptedFiles.map(file => Object.assign(file, {
+      preview: URL.createObjectURL(file)
+    }));
+
+    setNewImageFiles(prev => [...prev, ...newAcceptedFiles].slice(0, MAX_FILES)); // Ensure limit strictly
+
+    // Handle rejections (optional: show specific errors)
+    fileRejections.forEach(({ file, errors }) => {
+        errors.forEach(error => {
+            if (error.code === 'file-too-large') {
+                toast.error(`File "${file.name}" is too large. Max size: ${formatBytes(MAX_FILE_SIZE)}`);
+            } else if (error.code === 'file-invalid-type') {
+                toast.error(`File "${file.name}" has an invalid type.`);
+            } else {
+                 toast.error(`Error with file "${file.name}": ${error.message}`);
+            }
+        });
+    });
+
+     // Reset the file input to allow re-selecting the same file
+     if (imageInputRef.current) {
+        imageInputRef.current.value = "";
+     }
+
+  }, [newImageFiles]);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+      onDrop,
+      accept: ALLOWED_MIME_TYPES,
+      maxSize: MAX_FILE_SIZE,
+      maxFiles: MAX_FILES, // This primarily affects initial selection dialog
+      noClick: true, // We'll trigger click manually
+      noKeyboard: true,
+  });
+
+  // Remove preview
+  const removeImage = (index: number) => {
+      setNewImageFiles(prev => {
+          const newFiles = [...prev];
+          const removedFile = newFiles.splice(index, 1)[0];
+          URL.revokeObjectURL(removedFile.preview); // Clean up object URL
+          return newFiles;
+      });
+  };
+
+  // Clean up previews on unmount
+  useEffect(() => {
+    return () => newImageFiles.forEach(file => URL.revokeObjectURL(file.preview));
+  }, [newImageFiles]);
 
   // Handle Form Submission Result (Success/Error Toasts)
   useEffect(() => {
-    // Only show toast if we have a message and we're not submitting
-    if (productState.message && !isSubmitting) {
+    if (productState.message) {
       if (productState.type === "success") {
         toast.success(productState.message)
         productFormRef.current?.reset()
         setSelectedCategories([])
-        supabaseUpload.setFiles([])
-        setUploadedImageUrls([])
-        setImagePreviewUrls([])
-        supabaseUpload.setErrors([])
+        setNewImageFiles([])
+        newImageFiles.forEach(file => URL.revokeObjectURL(file.preview));
       } else if (productState.type === "error") {
         toast.error(productState.message)
+        if (productState.errors?.image_links) {
+          productState.errors.image_links.forEach((errMsg: string) => {
+            toast.error("Image Upload Error", { description: errMsg });
+          });
+        }
       }
     }
-  }, [productState, isSubmitting])
-
-  // Derive public URLs when upload succeeds
-  useEffect(() => {
-    if (supabaseUpload.isSuccess && supabaseUpload.successes.length > 0) {
-      const publicUrls = supabaseUpload.successes.map((uploadedPath) => {
-        const { data } = createClient().storage.from("product-images").getPublicUrl(uploadedPath)
-        return data.publicUrl
-      })
-      setUploadedImageUrls(publicUrls)
-    }
-  }, [supabaseUpload.isSuccess, supabaseUpload.successes])
-
-  // Create preview URLs for selected files
-  useEffect(() => {
-    const newPreviewUrls = supabaseUpload.files.filter((file) => file.preview).map((file) => file.preview as string)
-    imagePreviewUrls.forEach((url) => URL.revokeObjectURL(url))
-    setImagePreviewUrls(newPreviewUrls)
-    return () => {
-      newPreviewUrls.forEach((url) => URL.revokeObjectURL(url))
-    }
-  }, [supabaseUpload.files])
+  }, [productState, newImageFiles]);
 
   // Toggle category selection
   const toggleCategory = (category: Category) =>
@@ -165,12 +181,20 @@ export function ProductForm({ initialCategories, companyId }: { initialCategorie
     setIsCategoryModalOpen(false)
   }
 
+  // Add files to FormData before submitting
+  const handleFormSubmit = (formData: FormData) => {
+      newImageFiles.forEach((file) => {
+          formData.append('new_images', file);
+      });
+      productFormAction(formData);
+  };
+
   return (
     <Card className="w-full max-w-lg">
       <CardHeader>
         <CardTitle>Create New Product</CardTitle>
       </CardHeader>
-      <form ref={productFormRef} onSubmit={handleSubmit} className="space-y-6">
+      <form ref={productFormRef} action={handleFormSubmit} className="space-y-6">
         <CardContent className="space-y-4">
           {/* Form Fields */}
           <Field
@@ -195,48 +219,65 @@ export function ProductForm({ initialCategories, companyId }: { initialCategorie
             errors={(productState as ProductFormStateWithErrorHandling).errors?.price}
           />
 
-          {/* Image Upload Dropzone */}
-          <div className="space-y-2">
-            <Label>
-              Product Images (Max {supabaseUpload.maxFiles}, {formatBytes(supabaseUpload.maxFileSize)})
-            </Label>
-            {uploadedImageUrls.map((url, index) => (
-              <input key={index} type="hidden" name="image_links" value={url} />
-            ))}
-            <Dropzone
-              {...supabaseUpload}
-              className={!companyId ? "pointer-events-none opacity-50" : ""}
-              onUpload={supabaseUpload.startUpload}>
-              <DropzoneContent />
-              {supabaseUpload.files.length === 0 && <DropzoneEmptyState />}
-            </Dropzone>
-            {(productState as ProductFormStateWithErrorHandling).errors?.image_links && (
-              <div className="text-sm text-destructive mt-1">
-                {(productState as ProductFormStateWithErrorHandling).errors!.image_links!.map((e: string) => (
-                  <p key={e}>{e}</p>
-                ))}
-              </div>
-            )}
-            {!companyId && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Company ID not available yet. Cannot initialize upload path.
-              </p>
-            )}
-          </div>
+          {/* Hidden companyId input */}
+          <input readOnly type="hidden" name="companyId" value={companyId} />
 
-          {/* Image Previews */}
-          {imagePreviewUrls.length > 0 && (
-            <div className="space-y-2">
-              <Label>Image Previews</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {imagePreviewUrls.map((url, index) => (
-                  <div key={index} className="relative aspect-square border rounded overflow-hidden">
-                    <Image src={url} alt={`Preview ${index + 1}`} fill style={{ objectFit: "cover" }} />
+          {/* Revamped Image Upload Dropzone */}
+          <div className="space-y-2">
+             <Label>
+                Product Images (Max {MAX_FILES}, {formatBytes(MAX_FILE_SIZE)} each)
+             </Label>
+            <div {...getRootProps({ className: `relative flex flex-col items-center justify-center w-full p-6 border-2 border-dashed rounded-lg cursor-pointer hover:border-primary transition-colors ${isDragActive ? 'border-primary bg-primary/10' : 'border-border'}` })}>
+               <input {...getInputProps({ name: 'new_images_input', ref: imageInputRef })} />
+
+              {newImageFiles.length === 0 && (
+                <div className="text-center">
+                  <UploadCloud className="w-10 h-10 mx-auto text-muted-foreground" />
+                  <p className="mt-2 text-sm text-muted-foreground">
+                     <span className="font-semibold text-primary">Click to upload</span> or drag and drop
+                   </p>
+                  <p className="text-xs text-muted-foreground">PNG, JPG, GIF, WEBP up to {formatBytes(MAX_FILE_SIZE)}</p>
+                </div>
+              )}
+
+              {newImageFiles.length > 0 && (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 mt-4 w-full">
+                      {newImageFiles.map((file, index) => (
+                          <div key={index} className="relative aspect-square border rounded overflow-hidden group">
+                              <Image src={file.preview} alt={`Preview ${index + 1}`} fill style={{ objectFit: "cover" }} />
+                              <Button
+                                  type="button"
+                                  variant="destructive"
+                                  size="icon"
+                                  className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                  onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); removeImage(index); }}
+                              >
+                                  <X className="h-4 w-4" />
+                                  <span className="sr-only">Remove image</span>
+                              </Button>
+                          </div>
+                      ))}
+                       {newImageFiles.length < MAX_FILES && (
+                           <button
+                                type="button"
+                                onClick={() => imageInputRef.current?.click()}
+                                className="relative flex flex-col items-center justify-center aspect-square border-2 border-dashed rounded-lg cursor-pointer hover:border-primary transition-colors text-muted-foreground hover:text-primary"
+                            >
+                               <ImageIcon className="w-8 h-8" />
+                                <span className="mt-1 text-xs">Add Image</span>
+                            </button>
+                        )}
                   </div>
-                ))}
-              </div>
+              )}
             </div>
-          )}
+             {(productState as ProductFormStateWithErrorHandling).errors?.image_links && (
+               <div className="text-sm text-destructive mt-1">
+                 {(productState as ProductFormStateWithErrorHandling).errors!.image_links!.map((e: string) => (
+                   <p key={e}>{e}</p>
+                 ))}
+               </div>
+             )}
+          </div>
 
           {/* Category Selection */}
           <div className="space-y-2">
@@ -249,61 +290,62 @@ export function ProductForm({ initialCategories, companyId }: { initialCategorie
                 <span className="text-sm text-muted-foreground">Select categories below...</span>
               )}
               {selectedCategories.map((cat) => (
-                <Badge key={cat.id} variant="secondary" className="flex items-center gap-1">
+                <Badge key={cat.id} variant="secondary">
                   {cat.name}
-                  <button type="button" onClick={() => toggleCategory(cat)} aria-label={`Remove ${cat.name}`}>
-                    <X className="h-3 w-3" />
+                  <button
+                    type="button"
+                    className="ml-1 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                    onClick={() => toggleCategory(cat)}>
+                    <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
                   </button>
                 </Badge>
               ))}
             </div>
-            <div className="text-sm text-destructive">
-              {(productState as ProductFormStateWithErrorHandling).errors?.categories?.map((e) => <p key={e}>{e}</p>)}
-            </div>
-            <div className="flex flex-wrap gap-2 pt-2">
+            <div className="flex flex-wrap gap-2">
               {availableCategories
-                .filter((cat) => !selectedCategories.some((c) => c.id === cat.id))
+                .filter((cat) => !selectedCategories.some((sc) => sc.id === cat.id))
                 .map((cat) => (
                   <Button key={cat.id} type="button" variant="outline" size="sm" onClick={() => toggleCategory(cat)}>
-                    {cat.name}
+                    <PlusCircle className="mr-1 h-4 w-4" /> {cat.name}
                   </Button>
                 ))}
               <Dialog open={isCategoryModalOpen} onOpenChange={setIsCategoryModalOpen}>
                 <DialogTrigger asChild>
-                  <Button type="button" variant="ghost" size="sm">
+                  <Button type="button" variant="outline" size="sm">
                     <PlusCircle className="mr-1 h-4 w-4" /> New Category
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create New Category</DialogTitle>
+                    <DialogDescription>Add a new category to assign to products.</DialogDescription>
+                  </DialogHeader>
                   <CreateCategoryInlineForm
-                    onCategoryCreated={handleNewCategoryCreated}
-                    onClose={() => setIsCategoryModalOpen(false)}
-                    companyId={companyId}
+                     companyId={companyId}
+                     onCategoryCreated={handleNewCategoryCreated}
+                     onClose={() => setIsCategoryModalOpen(false)}
                   />
                 </DialogContent>
               </Dialog>
             </div>
+            {(productState as ProductFormStateWithErrorHandling).errors?.categories && (
+              <div className="text-sm text-destructive mt-1">
+                {(productState as ProductFormStateWithErrorHandling).errors!.categories!.map((e: string) => (
+                  <p key={e}>{e}</p>
+                ))}
+              </div>
+            )}
           </div>
         </CardContent>
         <div className="px-6 pb-6">
-          <Button type="submit" disabled={isSubmitting || !companyId || supabaseUpload.loading}>
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating Product...
-              </>
-            ) : (
-              "Create Product"
-            )}
-          </Button>
-          {companyId && <input readOnly type="hidden" name="companyId" value={companyId} />}
+          <SubmitButton text="Create Product" pendingText="Creating..." />
         </div>
       </form>
     </Card>
   )
 }
 
-// --- Simplified Field Component ---
+// --- Reusable Field Component ---
 function Field({
   label,
   name,
@@ -325,26 +367,33 @@ function Field({
   as?: "input" | "textarea"
   disabled?: boolean
 }) {
-  const id = `${name}-input`
-  const Component = as === "textarea" ? Textarea : Input
+  const id = React.useId()
+  const errorId = `${id}-error`
+  const InputComponent = as === "textarea" ? Textarea : Input
+
   return (
     <div className="space-y-2">
-      <Label htmlFor={id}>
-        {label} {required && <span className="text-destructive">*</span>}
-      </Label>
-      <Component
+      <Label htmlFor={id}>{label}</Label>
+      <InputComponent
         id={id}
         name={name}
         type={type}
         required={required}
         step={step}
         min={min}
-        aria-describedby={`${name}-error`}
+        aria-describedby={errors ? errorId : undefined}
+        aria-invalid={!!errors}
         disabled={disabled}
+        // @ts-ignore - Workaround for passing props to Textarea/Input
+        rows={as === "textarea" ? 3 : undefined}
       />
-      <div id={`${name}-error`} aria-live="polite" className="text-sm text-destructive">
-        {errors?.map((e) => <p key={e}>{e}</p>)}
-      </div>
+      {errors && (
+        <div id={errorId} aria-live="polite" className="text-sm text-destructive">
+          {errors.map((e) => (
+            <p key={e}>{e}</p>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -365,9 +414,9 @@ function CreateCategoryInlineForm({
 
   // Handle form result with toasts
   useEffect(() => {
-    if (state.type === "success" && state.newCategory) {
+    if (state.type === "success" && state.data) {
       toast.success(state.message || "Category created successfully!")
-      onCategoryCreated(state.newCategory)
+      onCategoryCreated({ id: String(state.data.id), name: state.data.name })
       formRef.current?.reset()
       // onClose(); // Optionally close dialog on success
     } else if (state.type === "error") {
@@ -377,65 +426,61 @@ function CreateCategoryInlineForm({
         console.error("Category Validation/DB Errors:", state.errors)
       }
     }
-    // Add onClose to dependencies if using it inside the effect
-  }, [state, onCategoryCreated /*, onClose */])
+  }, [state, onCategoryCreated])
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     startTransition(() => {
       const formData = new FormData(e.currentTarget)
       if (!formData.has("companyId")) {
-        formData.set("companyId", companyId)
+          formData.set("companyId", companyId)
       }
       formAction(formData)
     })
   }
 
   return (
-    <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
-      <DialogHeader>
-        <DialogTitle>Create New Category</DialogTitle>
-        <DialogDescription>Enter a name for the new category.</DialogDescription>
-      </DialogHeader>
-
-      {/* --- REMOVE ALERT COMPONENT BELOW (Already commented out, remove fully) --- */}
-      {/* {state.message && state.type && (
-        <Alert variant={state.type === "error" ? "destructive" : "default"}>
-          <AlertTitle>{state.type === "error" ? "Error" : "Success"}</AlertTitle>
-          <AlertDescription>{state.message}</AlertDescription>
-        </Alert>
-      )} */}
-
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-4 p-4">
       <Field
         label="Category Name"
         name="name"
         required
-        // Display potential errors from Zod or database level
-        errors={state.errors?.name || state.errors?.database}
+        errors={state.errors?.name}
         disabled={isPending}
       />
       <input type="hidden" name="companyId" value={companyId} />
+
+      {state.errors?.database && (
+        <div className="text-sm text-destructive">
+          {state.errors.database.map((e) => <p key={e}>{e}</p>)}
+        </div>
+      )}
+
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" onClick={onClose} disabled={isPending}>
           Cancel
         </Button>
-        <SubmitButton isPending={isPending} pendingText="Creating..." text="Create Category" />
+        <SubmitButton text="Create Category" pendingText="Creating..." isPending={isPending} />
       </div>
     </form>
   )
 }
 
-// Helper function from dropzone component (can be moved to utils)
+// --- Utility: Format Bytes ---
 const formatBytes = (
   bytes: number,
   decimals = 2,
   size?: "bytes" | "KB" | "MB" | "GB" | "TB" | "PB" | "EB" | "ZB" | "YB"
 ) => {
-  const k = 1000
-  const dm = decimals < 0 ? 0 : decimals
-  const sizes = ["bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
+  if (!+bytes) return "0 Bytes"
 
-  if (bytes === 0 || bytes === undefined) return size !== undefined ? `0 ${size}` : "0 bytes"
-  const i = size !== undefined ? sizes.indexOf(size) : Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i]
+  const k = 1024
+  const dm = decimals < 0 ? 0 : decimals
+  const sizes = size
+    ? [size]
+    : ["bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
+
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`
 }
