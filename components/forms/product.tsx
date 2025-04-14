@@ -2,6 +2,7 @@
 "use client"
 
 import React, { useState, useEffect, useRef, useTransition, useActionState, startTransition, useCallback } from "react"
+import dynamic from 'next/dynamic'; // Import dynamic
 import { useFormStatus } from "react-dom"
 import { Loader2, PlusCircle, X, Image as ImageIcon, UploadCloud } from "lucide-react"
 import Image from "next/image"
@@ -47,6 +48,16 @@ interface FileWithPreview extends File {
 // Initial States
 const initialProductState: ProductFormState = { message: "", type: null }
 const initialCategoryState: CategoryFormState = { message: "", type: null }
+
+// Dynamically import the CreateCategoryInlineForm
+const DynamicCreateCategoryForm = dynamic(() =>
+  import("@/components/forms/product") // Correct path to the module
+    .then((mod) => mod.CreateCategoryInlineForm), // Access the exported component
+  {
+    loading: () => <div className="p-4 text-center">Loading...</div>, // Simple loading state
+    ssr: false
+  }
+);
 
 // --- Shared Submit Button Component ---
 function SubmitButton({ pendingText, text, isPending }: { pendingText: string; text: string; isPending?: boolean }) {
@@ -320,7 +331,7 @@ export function ProductForm({ initialCategories, companyId }: { initialCategorie
                     <DialogTitle>Create New Category</DialogTitle>
                     <DialogDescription>Add a new category to assign to products.</DialogDescription>
                   </DialogHeader>
-                  <CreateCategoryInlineForm
+                  <DynamicCreateCategoryForm
                      companyId={companyId}
                      onCategoryCreated={handleNewCategoryCreated}
                      onClose={() => setIsCategoryModalOpen(false)}
@@ -399,7 +410,7 @@ function Field({
 }
 
 // --- Inline Category Creation Form ---
-function CreateCategoryInlineForm({
+export function CreateCategoryInlineForm({
   onCategoryCreated,
   onClose,
   companyId,

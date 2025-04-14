@@ -1,6 +1,7 @@
 "use server"
 import { createClient } from "@/lib/supabase/server"
 import { companyFormSchema, CompanySupabaseData } from "@/schemas/companySchema"
+import { revalidatePath } from "next/cache"
 
 export async function createCompany(data: {
   companyName: string
@@ -53,6 +54,12 @@ export async function createCompany(data: {
 
     console.log("Company creation successful.", companyData)
     // Return the fetched data directly, no unsafe assertion needed
+
+    // Revalidate the path where companies are listed
+    revalidatePath("/companies")
+    // Potentially revalidate other relevant paths like the main dashboard
+    revalidatePath("/dashboard")
+
     return {
       success: true,
       message: "Company created successfully!",
@@ -114,6 +121,12 @@ export async function saveBusinessWords(data: { word1: string; word2: string; wo
       return { success: false, message: "Failed to save words. Please try again." }
     }
     console.log("Simulated DB operations successful.")
+
+    // Revalidate the path for the specific company dashboard/settings
+    revalidatePath(`/dashboard/${companyId}`)
+    // If these words are displayed elsewhere, revalidate those paths too.
+    // e.g., revalidatePath(`/dashboard/${companyId}/settings`) if specific
+
     return { success: true, message: "Business details saved!" }
   } catch (error) {
     console.error("error happened while saving three words:", error)
