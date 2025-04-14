@@ -53,6 +53,7 @@ const systemItems = [
   },
 ]
 
+
 // Add companyId prop
 export async function DashboardSidebar({ companyId }: { companyId: string }) {
   const supabase = await createClient()
@@ -76,7 +77,7 @@ export async function DashboardSidebar({ companyId }: { companyId: string }) {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               {/* Consider making the logo link to the specific company dashboard or a general dashboard home */}
-              <Link href={`/dashboard/${companyId}`}>
+              <Link href={`/dashboard/${companyId}`} prefetch={true}>
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                   <GalleryVerticalEnd className="size-4" />
                 </div>
@@ -98,7 +99,7 @@ export async function DashboardSidebar({ companyId }: { companyId: string }) {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     {/* Use the companyId prop for links */}
-                    <Link href={`/dashboard/${companyId}${item.url}`}>
+                    <Link href={`/dashboard/${companyId}${item.url}`} prefetch={true}>
                       <item.icon />
                       <span>{item.title}</span>
                     </Link>
@@ -117,10 +118,10 @@ export async function DashboardSidebar({ companyId }: { companyId: string }) {
                   <SidebarMenuButton asChild>
                     {/* Update system links if they need company context */}
                     {/* Example: <Link href={`/dashboard/${companyId}${item.url}`}> */}
-                    <a href={item.url}> { /* Assuming these are general for now */ }
+                    <Link href={`/dashboard/${companyId}${item.url}`} prefetch={true}> { /* Assuming these are general for now */ }
                       <item.icon />
                       <span>{item.title}</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}

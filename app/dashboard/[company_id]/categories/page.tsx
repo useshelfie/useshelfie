@@ -5,6 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CreateCategoryForm } from "@/components/forms/category"
 import { Suspense } from "react"
 import { getCategoriesByCompany } from "@/lib/data/cache"
+import { SkeletonLoader } from "@/components/ui/skeleton-loader"
+import { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Categories",
+  description: "Categories",
+}
 
 export default function CategoriesDashboardPage({ params }: { params: { company_id: string } }) {
   const companyId = params.company_id
@@ -25,9 +32,7 @@ export default function CategoriesDashboardPage({ params }: { params: { company_
               fallback={
                 <div className="space-y-4">
                   {[...Array(3)].map((_, i) => (
-                    <div key={i} className="animate-pulse">
-                      <div className="h-16 bg-gray-200 rounded-md dark:bg-gray-800"></div>
-                    </div>
+                    <SkeletonLoader key={i} height={64} className="rounded-md" />
                   ))}
                 </div>
               }>

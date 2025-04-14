@@ -1,10 +1,11 @@
 "use client"
 
-import { useEffect, useState, useRef, useCallback } from "react"
+import { useEffect, useState, useRef, useCallback, useActionState } from "react"
 import Image from "next/image"
-import { useFormState, useFormStatus } from "react-dom"
+import { useFormStatus } from "react-dom"
 import Link from "next/link"
 import { updateProductAction, type ProductFormState } from "@/app/dashboard/[company_id]/products/actions"
+import { createCategoryAction } from "@/app/dashboard/[company_id]/categories/actions"
 import type { Product } from "@/types/product"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -12,11 +13,19 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { CircleCheck, AlertTriangle, Loader2, X, UploadCloud, Image as ImageIcon } from "lucide-react"
+import { CircleCheck, AlertTriangle, Loader2, X, UploadCloud, Image as ImageIcon, PlusCircle } from "lucide-react"
 import { formatPrice } from "@/lib/utils"
 import { useDropzone, type FileRejection } from 'react-dropzone';
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 
 // Assuming a Category type is available or fetched
 interface Category {
@@ -33,6 +42,20 @@ interface EditProductFormProps {
   product: Product & { product_categories?: { category_id: number }[] } // Include categories for pre-population
   availableCategories: Category[] // Categories available for this company
   companyId: number
+}
+
+// Interface for category creation form state
+interface CategoryFormState {
+  message: string;
+  type: "success" | "error" | null;
+  data?: {
+    id: number;
+    name: string;
+  };
+  errors?: {
+    name?: string[];
+    database?: string[];
+  };
 }
 
 // --- Utility: Format Bytes (Defined locally) ---
@@ -58,15 +81,91 @@ function SubmitButton() {
   )
 }
 
+// --- Inline Category Creation Form ---
+function CreateCategoryInlineForm({
+  onCategoryCreated,
+  onClose,
+  companyId,
+}: {
+  onCategoryCreated: (cat: Category) => void
+  onClose: () => void
+  companyId: number
+}) {
+  const initialCategoryState: CategoryFormState = { message: "", type: null }
+  const [state, formAction] = useActionState(createCategoryAction, initialCategoryState)
+  const formRef = useRef<HTMLFormElement>(null)
+  const [isPending, setIsPending] = useState(false)
+
+  // Handle form result with toasts
+  useEffect(() => {
+    if (state.type === "success" && state.data) {
+      toast.success(state.message || "Category created successfully!")
+      onCategoryCreated({ id: state.data.id, name: state.data.name })
+      formRef.current?.reset()
+      setIsPending(false)
+    } else if (state.type === "error") {
+      toast.error(state.message || "Failed to create category.")
+      setIsPending(false)
+    }
+  }, [state, onCategoryCreated])
+
+  const handleSubmit = (formData: FormData) => {
+    setIsPending(true)
+    formData.set("companyId", companyId.toString())
+    formAction(formData)
+  }
+
+  return (
+    <form ref={formRef} action={handleSubmit} className="space-y-4 p-4">
+      <div className="space-y-2">
+        <Label htmlFor="name">Category Name</Label>
+        <Input
+          id="name"
+          name="name"
+          required
+          disabled={isPending}
+        />
+        {state.errors?.name && (
+          <p className="text-sm text-destructive">{state.errors.name.join(", ")}</p>
+        )}
+      </div>
+
+      {state.errors?.database && (
+        <div className="text-sm text-destructive">
+          {state.errors.database.map((e) => <p key={e}>{e}</p>)}
+        </div>
+      )}
+
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="ghost" onClick={onClose} disabled={isPending}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isPending}>
+          {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {isPending ? "Creating..." : "Create Category"}
+        </Button>
+      </div>
+    </form>
+  )
+}
+
 export function EditProductForm({ product, availableCategories, companyId }: EditProductFormProps) {
   const initialState: ProductFormState = { message: "", type: null, errors: {} }
   const updateProductWithId = updateProductAction.bind(null, product.id)
-  const [state, formAction] = useFormState(updateProductWithId, initialState)
+  const [state, formAction] = useActionState(updateProductWithId, initialState)
   const formRef = useRef<HTMLFormElement>(null);
 
   // --- State Management ---
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>(() => {
     return product.product_categories?.map(pc => pc.category_id) || []
+  })
+  
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
+  const [categoriesList, setCategoriesList] = useState<Category[]>(availableCategories)
+  const [selectedCategories, setSelectedCategories] = useState<Category[]>(() => {
+    // Initialize with product's existing categories
+    const selectedIds = product.product_categories?.map(pc => pc.category_id) || []
+    return availableCategories.filter(cat => selectedIds.includes(cat.id))
   })
 
   // Image State - Simplified for new/deleted
@@ -85,6 +184,34 @@ export function EditProductForm({ product, availableCategories, companyId }: Edi
     'image/gif': [],
   };
   const currentImageCount = existingImageUrls.length - imagesToDelete.length + newImageFiles.length;
+
+  // Toggle category selection
+  const toggleCategory = (category: Category) => {
+    setSelectedCategories((prev) =>
+      prev.some((c) => c.id === category.id) 
+        ? prev.filter((c) => c.id !== category.id) 
+        : [...prev, category]
+    )
+    
+    // Also update the IDs array to maintain compatibility with existing code
+    setSelectedCategoryIds((prev) =>
+      prev.includes(category.id)
+        ? prev.filter(id => id !== category.id)
+        : [...prev, category.id]
+    )
+  }
+
+  // Handle new category creation
+  const handleNewCategoryCreated = (newCategory: Category) => {
+    setCategoriesList((prev) =>
+      prev.some((c) => c.id === newCategory.id)
+        ? prev
+        : [...prev, newCategory].sort((a, b) => a.name.localeCompare(b.name))
+    )
+    setSelectedCategories((prev) => [...prev, newCategory])
+    setSelectedCategoryIds((prev) => [...prev, newCategory.id])
+    setIsCategoryModalOpen(false)
+  }
 
   // --- Dropzone Hook for New Images ---
   const onDrop = useCallback((acceptedFiles: File[], fileRejections: FileRejection[]) => {
@@ -195,9 +322,9 @@ export function EditProductForm({ product, availableCategories, companyId }: Edi
       newImageFiles.forEach((file) => {
           formData.append('new_images', file);
       });
-      // Add selected category IDs
-      selectedCategoryIds.forEach(id => {
-          formData.append('category_ids', String(id));
+      // Add selected category IDs - Using the selectedCategories approach
+      selectedCategories.forEach(category => {
+          formData.append('category_ids', String(category.id));
       });
 
       formAction(formData); // Call the server action
@@ -279,20 +406,52 @@ export function EditProductForm({ product, availableCategories, companyId }: Edi
             )}
           </div>
           
-          {/* Categories (Using hidden inputs for now) */}
+          {/* Categories - Enhanced with the UI from product.tsx */}
           <div className="space-y-2">
-             <Label>Categories</Label>
-             {/* Placeholder for a real Multi-Select Component */}
-             <div className="p-3 border rounded-md bg-muted text-muted-foreground">
-                <p className="text-sm font-medium mb-2">Select Categories (Multi-Select UI needed)</p>
-                 <p className="text-xs">Current IDs: {selectedCategoryIds.join(', ') || 'None'}</p>
-                 <p className="text-xs mt-1">Available: {availableCategories.map(c => `${c.name} (${c.id})`).join(', ')}</p>
-                 {/* Add controls here to modify selectedCategoryIds */}
-             </div>
-             {/* Hidden inputs to submit the category IDs */}
-             {selectedCategoryIds.map(id => (
-                <input key={id} type="hidden" name="category_ids" value={id} />
-             ))}
+            <Label>Categories</Label>
+            <div className="flex flex-wrap gap-2 rounded-md border p-2 min-h-[40px]">
+              {selectedCategories.length === 0 && (
+                <span className="text-sm text-muted-foreground">Select categories below...</span>
+              )}
+              {selectedCategories.map((cat) => (
+                <Badge key={cat.id} variant="secondary">
+                  {cat.name}
+                  <button
+                    type="button"
+                    className="ml-1 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                    onClick={() => toggleCategory(cat)}>
+                    <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {categoriesList
+                .filter((cat) => !selectedCategories.some((sc) => sc.id === cat.id))
+                .map((cat) => (
+                  <Button key={cat.id} type="button" variant="outline" size="sm" onClick={() => toggleCategory(cat)}>
+                    <PlusCircle className="mr-1 h-4 w-4" /> {cat.name}
+                  </Button>
+                ))}
+              <Dialog open={isCategoryModalOpen} onOpenChange={setIsCategoryModalOpen}>
+                <DialogTrigger asChild>
+                  <Button type="button" variant="outline" size="sm">
+                    <PlusCircle className="mr-1 h-4 w-4" /> New Category
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create New Category</DialogTitle>
+                    <DialogDescription>Add a new category to assign to products.</DialogDescription>
+                  </DialogHeader>
+                  <CreateCategoryInlineForm
+                    companyId={companyId}
+                    onCategoryCreated={handleNewCategoryCreated}
+                    onClose={() => setIsCategoryModalOpen(false)}
+                  />
+                </DialogContent>
+              </Dialog>
+            </div>
             {state.errors?.categories && (
               <p className="text-sm text-destructive">{state.errors.categories.join(", ")}</p>
             )}

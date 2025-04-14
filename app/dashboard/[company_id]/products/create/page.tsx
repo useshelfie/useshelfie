@@ -4,6 +4,12 @@ import { headers } from "next/headers"
 import { createClient } from "@/lib/supabase/server"
 import { ProductForm } from "@/components/forms/product"
 import { getCategoriesForCurrentCompany } from "@/lib/data/products" // Import function to get categories
+import { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Create Product",
+  description: "Create Product",
+}
 
 export default async function DashboardCreateProductPage() {
   const supabase = await createClient()
@@ -27,7 +33,7 @@ export default async function DashboardCreateProductPage() {
 
   return (
     <div className="flex min-h-svh w-full flex-col items-center justify-start gap-8 p-4 md:p-8">
-      <ProductForm initialCategories={userCategories} />
+      <ProductForm initialCategories={userCategories} companyId={currentCompanyID} />
     </div>
   )
 }

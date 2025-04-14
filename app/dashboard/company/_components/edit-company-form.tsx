@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect } from "react"
-import { useFormState, useFormStatus } from "react-dom"
+import { useEffect, useActionState } from "react"
+import { useFormStatus } from "react-dom"
 import { updateCompanyAction, type CompanyFormState } from "@/app/dashboard/company/actions"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -33,7 +33,7 @@ function SubmitButton() {
 export function EditCompanyForm({ company }: EditCompanyFormProps) {
   const initialState: CompanyFormState = { message: "", type: null, errors: {} }
   const updateCompanyWithId = updateCompanyAction.bind(null, company.id)
-  const [state, formAction] = useFormState(updateCompanyWithId, initialState)
+  const [state, formAction] = useActionState(updateCompanyWithId, initialState)
 
   useEffect(() => {
     if (state.type === "success") {

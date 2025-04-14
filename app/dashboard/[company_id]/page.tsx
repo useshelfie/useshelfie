@@ -1,6 +1,7 @@
 import { Suspense } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { fetchDashboardStatsByCompany } from "@/lib/data/cache"
+import { SkeletonCard } from "@/components/ui/skeleton-loader"
 
 export default function Dashboard({ params }: { params: { company_id: string } }) {
   return (
@@ -17,15 +18,7 @@ function DashboardSkeleton({ count }: { count: number }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {[...Array(count)].map((_, i) => (
-        <Card key={i} role="region" aria-label="Loading stat">
-          <CardHeader>
-            <div className="h-6 w-24 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
-            <div className="h-4 w-32 bg-gray-200 dark:bg-gray-800 rounded animate-pulse mt-2" />
-          </CardHeader>
-          <CardContent>
-            <div className="h-8 w-16 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
-          </CardContent>
-        </Card>
+        <SkeletonCard key={i} aria-label="Loading stat" />
       ))}
     </div>
   )

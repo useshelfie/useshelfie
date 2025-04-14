@@ -69,36 +69,52 @@ export async function getProductsByCompany(companyId: string) {
 // Renamed for clarity and added companyId parameter
 export async function fetchDashboardStatsByCompany(companyId: string): Promise<DashboardStats> {
   if (!companyId) {
-    console.error("No company ID provided to fetchDashboardStatsByCompany")
-    // Return a default/error state or throw
-    return { productsCount: 0, categoriesCount: 0 }
+    // Throw an error for invalid input
+    throw new Error("No company ID provided to fetchDashboardStatsByCompany");
   }
 
-  try {
-    const supabase = await createClient()
+  const supabase = await createClient(); // Assuming createClient handles its own errors or throws
 
-    // Use Promise.all to fetch counts concurrently
-    const [productsResult, categoriesResult] = await Promise.all([
+  try {
+    // Use Promise.allSettled to handle potential errors from individual queries gracefully
+    const results = await Promise.allSettled([
       supabase.from("products").select("*", { count: "exact", head: true }).eq("company_id", companyId),
       supabase.from("categories").select("*", { count: "exact", head: true }).eq("company_id", companyId),
-    ])
+    ]);
 
-    // Handle potential errors from individual queries
-    if (productsResult.error) {
-      console.error(`Error fetching product count for company ${companyId}:`, productsResult.error)
+    const productsResult = results[0];
+    const categoriesResult = results[1];
+
+    // Check for errors after all promises have settled
+    if (productsResult.status === 'rejected' || (productsResult.status === 'fulfilled' && productsResult.value.error)) {
+      const error = productsResult.status === 'rejected' ? productsResult.reason : productsResult.value.error;
+      console.error(`Error fetching product count for company ${companyId}:`, error);
+      // Re-throw the specific error or a general error
+      throw new Error(`Failed to fetch product count: ${error?.message || 'Unknown error'}`);
     }
-    if (categoriesResult.error) {
-      console.error(`Error fetching category count for company ${companyId}:`, categoriesResult.error)
+
+    if (categoriesResult.status === 'rejected' || (categoriesResult.status === 'fulfilled' && categoriesResult.value.error)) {
+      const error = categoriesResult.status === 'rejected' ? categoriesResult.reason : categoriesResult.value.error;
+      console.error(`Error fetching category count for company ${companyId}:`, error);
+      // Re-throw the specific error or a general error
+      throw new Error(`Failed to fetch category count: ${error?.message || 'Unknown error'}`);
     }
+
+    // If both settled successfully and have no Supabase errors
+    const productsCount = productsResult.status === 'fulfilled' ? productsResult.value.count : 0;
+    const categoriesCount = categoriesResult.status === 'fulfilled' ? categoriesResult.value.count : 0;
+
 
     return {
-      productsCount: productsResult.count || 0,
-      categoriesCount: categoriesResult.count || 0,
-    }
+      productsCount: productsCount || 0,
+      categoriesCount: categoriesCount || 0,
+    };
   } catch (error) {
-    console.error(`Failed to fetch dashboard stats for company ${companyId}:`, error)
-    // Return a default/error state or throw
-    return { productsCount: 0, categoriesCount: 0 }
+    // Catch errors from createClient or Promise.allSettled itself (less likely)
+    // Also catches the re-thrown errors from above
+    console.error(`Failed to fetch dashboard stats for company ${companyId}:`, error);
+    // Re-throw the caught error to be handled by the caller
+    throw error;
   }
 }
 

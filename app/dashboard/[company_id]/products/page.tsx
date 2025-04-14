@@ -6,6 +6,13 @@ import Link from "next/link"
 import Image from "next/image"
 import { Suspense } from "react"
 import { getProductsByCompany } from "@/lib/data/cache"
+import { SkeletonLoader, SkeletonText } from "@/components/ui/skeleton-loader"
+import { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Products",
+  description: "Products",
+}
 
 export default async function ProductsPage({ params }: { params: { company_id: string } }) {
   const companyId = params.company_id
@@ -38,11 +45,11 @@ export default async function ProductsPage({ params }: { params: { company_id: s
 function ProductSkeleton() {
   return (
     <Card className="p-4">
-      <div className="animate-pulse space-y-4">
-        <div className="aspect-square relative rounded-md bg-gray-200 dark:bg-gray-800" />
+      <div className="space-y-4">
+        <SkeletonLoader shape="rectangle" className="aspect-square rounded-md" />
         <div className="space-y-2">
-          <div className="h-4 bg-gray-200 rounded dark:bg-gray-800 w-3/4" />
-          <div className="h-4 bg-gray-200 rounded dark:bg-gray-800 w-1/2" />
+          <SkeletonText width="75%" />
+          <SkeletonText width="50%" />
         </div>
       </div>
     </Card>

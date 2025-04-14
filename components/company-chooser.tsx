@@ -2,9 +2,18 @@
 
 // import { CompanySupabaseData } from "@/schemas/companySchema" // No longer needed for props
 import { Avatar, AvatarFallback } from "./ui/avatar"
-import { PlusIcon } from "lucide-react"
+import { Button } from "./ui/button" // Import Button for the trigger
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu" // Import Dropdown components
+import { PlusIcon, ChevronsUpDown } from "lucide-react" // Import ChevronsUpDown for trigger
 import { cn } from "@/lib/utils"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react" // Import useMemo
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -27,18 +36,19 @@ export default function CompanyChooser({ companies }: Props) {
   useEffect(() => {
     if (!pathname) return // Wait for pathname to be available
 
-    // console.log("Current pathname:", pathname) // Debug log
-
-    // Check if the path starts with '/dashboard/'
     if (pathname.startsWith("/dashboard/")) {
       const pathParts = pathname.slice("/dashboard/".length).split("/")
-      const companyId = pathParts[0] // First segment after /dashboard/
-      const remainingPath = pathParts.slice(1).join("/") // Rest of the path
-
-      // console.log("Parsed - companyId:", companyId, "pathAfterCompany:", remainingPath) // Debug log
-
-      setCurrentCompanyId(companyId)
-      setPathAfterCompany(remainingPath)
+      const companyId = pathParts[0]
+      // Check if the first part is a number (potential company ID)
+      if (companyId && !isNaN(Number(companyId))) {
+        const remainingPath = pathParts.slice(1).join("/")
+        setCurrentCompanyId(companyId)
+        setPathAfterCompany(remainingPath)
+      } else {
+        // If the part after /dashboard/ is not a number, it's not a company ID path
+        setCurrentCompanyId("")
+        setPathAfterCompany(pathname.slice("/dashboard/".length)) // Keep the rest for potential non-company paths
+      }
     } else {
       // Reset state if not on a dashboard route
       setCurrentCompanyId("")
@@ -46,41 +56,69 @@ export default function CompanyChooser({ companies }: Props) {
     }
   }, [pathname]) // Re-run when pathname changes
 
+  // Find the currently selected company object
+  const currentCompany = useMemo(() => {
+    if (!currentCompanyId) return null
+    return companies.find((company) => String(company.id) === currentCompanyId)
+  }, [currentCompanyId, companies])
+
   return (
     <div className="flex gap-2 items-center">
-      {/* Create Link - Adjusted href to point to company creation */}
-      <Link
-        href={`/dashboard/company/create`}
-        className="cursor-pointer rounded-full border-dashed border-2 flex items-center p-3 hover:bg-muted transition-all duration-200">
-        <PlusIcon />
-      </Link>
-
-      {/* Company Links */}
-      {companies.map((company) => {
-        // Comparison uses String() as currentCompanyId is from URL path (string)
-        const isCurrent = currentCompanyId === String(company.id)
-        const href = `/dashboard/${company.id}${pathAfterCompany ? `/${pathAfterCompany}` : ""}`
-
-        // console.log(`Company ${company.id}: isCurrent=${isCurrent}, href=${href}`) // Debug log
-
-        return (
-          <Link
-            href={href}
-            className={cn(
-              "cursor-pointer border border-border p-2 px-2 pr-4 flex gap-2 items-center rounded-full hover:bg-muted transition-all duration-200",
-              isCurrent ? "bg-muted" : ""
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            className="w-[200px] justify-between">
+            {currentCompany ? (
+              <>
+                <Avatar className="w-5 h-5 mr-2">
+                  <AvatarFallback>
+                    {currentCompany.name ? currentCompany.name[0].toUpperCase() : "?"}
+                  </AvatarFallback>
+                </Avatar>
+                {currentCompany.name}
+              </>
+            ) : (
+              "Select company..."
             )}
-            key={company.id}>
-            <Avatar>
-              {/* Use company.name, ensure it's not empty */}
-              <AvatarFallback>
-                {company.name ? company.name[0].toUpperCase() : "?"}
-              </AvatarFallback>
-            </Avatar>
-            <div className="text-center">{company.name}</div>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-[200px] p-0">
+          <DropdownMenuLabel>Select Company</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {companies.map((company) => {
+            const href = `/dashboard/${company.id}${pathAfterCompany ? `/${pathAfterCompany}` : ""}`
+            const isCurrent = currentCompanyId === String(company.id) // Use for potential styling if needed
+
+            return (
+              <Link href={href} key={company.id} passHref>
+                <DropdownMenuItem
+                  className={cn(
+                    "cursor-pointer flex gap-2 items-center",
+                    isCurrent ? "bg-muted" : "" // Optional: highlight current in dropdown
+                  )}>
+                  <Avatar className="w-5 h-5">
+                    <AvatarFallback>
+                      {company.name ? company.name[0].toUpperCase() : "?"}
+                    </AvatarFallback>
+                  </Avatar>
+                  {company.name}
+                </DropdownMenuItem>
+              </Link>
+            )
+          })}
+          <DropdownMenuSeparator />
+          {/* Link to create a new company */}
+          <Link href={`/dashboard/company/create`} passHref>
+             <DropdownMenuItem className="cursor-pointer text-muted-foreground">
+               <PlusIcon className="mr-2 h-4 w-4" />
+               Create New Company
+             </DropdownMenuItem>
           </Link>
-        )
-      })}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   )
 }

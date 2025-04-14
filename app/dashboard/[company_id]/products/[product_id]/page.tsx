@@ -5,6 +5,12 @@ import { ChevronLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { EditProductForm } from "./_components/edit-product-form"
 import { DeleteProductButton } from "./_components/delete-product-button"
+import { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Product",
+  description: "Product",
+}
 
 // Define Category type locally if not available globally
 interface Category {

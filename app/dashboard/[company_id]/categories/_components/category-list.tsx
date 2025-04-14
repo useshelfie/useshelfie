@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { useFormState, useFormStatus } from "react-dom"
+import { useState, useActionState } from "react"
+import { useFormStatus } from "react-dom"
 import { deleteCategoryAction, updateCategoryAction, type CategoryFormState } from "../actions"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -38,7 +38,7 @@ function CategoryItem({ category }: { category: Category }) {
 
     const initialState: CategoryFormState = { message: "", type: null, errors: {} }
     const updateCategoryWithId = updateCategoryAction.bind(null, category.id, category.company_id)
-    const [editState, formAction] = useFormState(updateCategoryWithId, initialState)
+    const [editState, formAction] = useActionState(updateCategoryWithId, initialState)
 
     const { pending: isSaving } = useFormStatus() // Needs to be used within the form
 
