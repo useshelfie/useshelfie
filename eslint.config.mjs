@@ -14,11 +14,16 @@ const eslintConfig = [
   {
     rules: {
       semi: "off",
-      indent: ["error", 2, { SwitchCase: 1 }],
       "prettier/prettier": "error",
     },
-    // Ignoring Shadncn/UI Components and config files to avoid lint issues
-    ignores: [".eslintrc.cjs", "next.config.mjs", "tailwind.config.js", "postcss.config.js", "components/ui/*"],
+    ignores: [
+      ".eslintrc.cjs",
+      "next.config.mjs",
+      "tailwind.config.js",
+      "postcss.config.js",
+      "components/ui/*",
+      ".prettierrc",
+    ],
   },
 ]
 

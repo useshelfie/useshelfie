@@ -17,7 +17,7 @@ export const config = {
      * Match all dashboard routes to ensure authentication.
      * Exclude API routes, static files, image optimization files, and common public files.
      */
-    '/dashboard/:path*',
+    "/dashboard/:path*",
 
     /*
      * Match specific other routes that require authentication if any.

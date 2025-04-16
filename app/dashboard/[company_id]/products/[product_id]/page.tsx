@@ -3,26 +3,18 @@ import { notFound } from "next/navigation"
 import Link from "next/link"
 import { ChevronLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { EditProductForm } from "./_components/edit-product-form"
-import { DeleteProductButton } from "./_components/delete-product-button"
+import { EditProductForm } from "@/components/product/forms/edit-product-form"
+import { DeleteProductButton } from "@/components/product/delete-button"
 import { Metadata } from "next"
+import { getCategoriesByCompany } from "@/lib/data/categories"
+import { getProductById } from "@/lib/data/products"
 
 export const metadata: Metadata = {
   title: "Product",
   description: "Product",
 }
 
-// Define Category type locally if not available globally
-interface Category {
-  id: number
-  name: string
-}
-
-export default async function ProductEditPage({ 
-    params 
-}: { 
-    params: { product_id: string; company_id: string } 
-}) {
+export default async function ProductEditPage({ params }: { params: { product_id: string; company_id: string } }) {
   const supabase = await createClient()
   const { product_id, company_id } = params
 
@@ -39,7 +31,7 @@ export default async function ProductEditPage({
     )
     .eq("id", product_id)
     // Ensure the product belongs to the company in the URL
-    .eq("company_id", parseInt(company_id, 10)) 
+    .eq("company_id", parseInt(company_id, 10))
     .single()
 
   if (productError || !product) {
@@ -49,15 +41,15 @@ export default async function ProductEditPage({
 
   // Fetch all categories available for this company
   const { data: availableCategories, error: categoriesError } = await supabase
-     .from('categories')
-     .select('id, name')
-     .eq('company_id', product.company_id)
-     .order('name');
+    .from("categories")
+    .select("id, name")
+    .eq("company_id", product.company_id)
+    .order("name")
 
   if (categoriesError) {
-     console.error("Error fetching available categories:", categoriesError);
-     // Handle error appropriately - maybe show message or default to empty list?
-     // For now, proceed with potentially empty list
+    console.error("Error fetching available categories:", categoriesError)
+    // Handle error appropriately - maybe show message or default to empty list?
+    // For now, proceed with potentially empty list
   }
 
   return (
@@ -72,19 +64,15 @@ export default async function ProductEditPage({
         </Link>
 
         {/* Edit Form */}
-        <EditProductForm 
-            product={product} 
-            availableCategories={availableCategories || []} 
-            companyId={product.company_id} 
+        <EditProductForm
+          product={product}
+          availableCategories={availableCategories || []}
+          companyId={product.company_id}
         />
 
         {/* Delete Button (with spacing) */}
         <div className="mt-8 pt-8 border-t border-destructive/20">
-             <DeleteProductButton 
-                productId={product.id} 
-                productName={product.name} 
-                companyId={product.company_id}
-             />
+          <DeleteProductButton productId={product.id} productName={product.name} companyId={product.company_id} />
         </div>
       </div>
     </div>

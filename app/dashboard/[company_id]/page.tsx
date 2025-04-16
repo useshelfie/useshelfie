@@ -1,6 +1,6 @@
 import { Suspense } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { fetchDashboardStatsByCompany } from "@/lib/data/cache"
+import { fetchDashboardStatsByCompany } from "@/lib/data/stats"
 import { SkeletonCard } from "@/components/ui/skeleton-loader"
 
 export default function Dashboard({ params }: { params: { company_id: string } }) {

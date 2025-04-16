@@ -1,10 +1,10 @@
-// app/dashboard/products/create/page.tsx
-import { redirect } from "next/navigation"
 import { headers } from "next/headers"
-import { createClient } from "@/lib/supabase/server"
-import { ProductForm } from "@/components/forms/product"
-import { getCategoriesForCurrentCompany } from "@/lib/data/products" // Import function to get categories
+import { ProductForm } from "@/components/product/forms/product"
+import { getCategoriesByCompany } from "@/lib/data/categories"
 import { Metadata } from "next"
+
+// Define the expected Category type for the form
+type FormCategory = { id: string; name: string }
 
 export const metadata: Metadata = {
   title: "Create Product",
@@ -12,28 +12,29 @@ export const metadata: Metadata = {
 }
 
 export default async function DashboardCreateProductPage() {
-  const supabase = await createClient()
   const headerList = await headers()
-  const currentCompanyID = headerList.get("x-current-path")?.split("/")[2] // assume pathname is /dashboard/[company_id]
+  const currentCompanyID = headerList.get("x-current-path")?.split("/")[2]
 
   if (!currentCompanyID) {
-    return <div></div>
-  }
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-  if (authError || !user) {
-    redirect("/login")
+    // Consider throwing an error or redirecting if company ID is essential
+    console.error("Company ID not found in headers")
+    return <div>Error: Company context not found.</div>
   }
 
   // Fetch categories for the current user server-side
-  const userCategories = await getCategoriesForCurrentCompany(currentCompanyID)
+  // Assuming getCategoriesByCompany returns { id: number; name: string; ... }[]
+  const userCategoriesFromDb = await getCategoriesByCompany(currentCompanyID)
+
+  // Map categories to the format expected by the form (string IDs)
+  const initialFormCategories: FormCategory[] = userCategoriesFromDb.map((cat) => ({
+    id: String(cat.id), // Explicitly convert ID to string
+    name: cat.name,
+  }))
 
   return (
     <div className="flex min-h-svh w-full flex-col items-center justify-start gap-8 p-4 md:p-8">
-      <ProductForm initialCategories={userCategories} companyId={currentCompanyID} />
+      {/* Pass the correctly formatted categories */}
+      <ProductForm initialCategories={initialFormCategories} companyId={currentCompanyID} />
     </div>
   )
 }

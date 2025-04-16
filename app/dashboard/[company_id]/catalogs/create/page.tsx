@@ -1,29 +1,20 @@
-import React from 'react';
-import { createClient } from '@/lib/supabase/server';
-import { CreateCatalogForm } from '@/components/forms/create-catalog-form';
-import { notFound } from 'next/navigation';
-
-// TODO: Implement CreateCatalogForm component
-// TODO: Handle form submission (call createCatalog API)
+import { CatalogForm } from "@/components/catalog/forms/catalog"
+import { Metadata } from "next"
 
 export default async function CreateCatalogPage({ params }: { params: { company_id: string } }) {
-  const companyId = parseInt(params.company_id, 10);
+  const companyId = parseInt(params.company_id, 10)
   if (isNaN(companyId)) {
-    return <div>Invalid company ID</div>; // Or redirect/notFound()
-  }
-
-  // We need the user ID to associate with the catalog
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-     // Handle case where user is not logged in (should be protected by middleware ideally)
-     notFound(); // Or redirect to login
+    return <div>Invalid company ID</div> // Or redirect/notFound()
   }
 
   return (
-    <div className="flex justify-center pt-8">
-      <CreateCatalogForm companyId={companyId} userId={user.id} />
-    </div>
-  );
-} 
+    <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+      <div className="flex items-center">
+        <h1 className="text-lg font-semibold md:text-2xl">Create New Catalog</h1>
+      </div>
+      <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm">
+        <CatalogForm companyId={companyId} />
+      </div>
+    </main>
+  )
+}
