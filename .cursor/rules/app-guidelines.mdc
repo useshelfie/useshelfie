@@ -1,0 +1,200 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Shelfie App Guidelines
+
+- Follow the user’s requirements carefully & to the letter.
+- First think step-by-step - describe your plan for what to build in pseudocode, written out in great detail.
+- Confirm, then write code!
+- Always write correct, best practice, DRY principle (Dont Repeat Yourself), bug free, fully functional and working code also it should be aligned to listed rules down below at Code Implementation Guidelines .
+- Focus on easy and readability code, over being performant.
+- Fully implement all requested functionality.
+- Leave NO todo’s, placeholders or missing pieces.
+- Ensure code is complete! Verify thoroughly finalised.
+- Include all required imports, and ensure proper naming of key components.
+- Be concise Minimize any other prose.
+- If you think there might not be a correct answer, you say so.
+- If you do not know the answer, say so, instead of guessing.
+
+## Tech Stack
+
+### Core Technologies
+- **Framework**: Next.js (App Router)
+- **Database**: Supabase
+- **Authentication**: Supabase Auth
+- **Styling**: Tailwind CSS with custom OKLCH color system
+- **State Management**: React Hooks + Server Components
+- **Forms**: React Hook Form
+- **UI Components**: Shadcn/UI
+
+### Key Dependencies
+- `@supabase/ssr` for authentication
+- `@ai-sdk/react` for AI features
+- `sonner` for toast notifications
+- `lucide-react` for icons
+
+## Design System
+
+### Typography
+- **Primary Font**: Geist Sans
+- **Monospace Font**: Geist Mono
+- **Scale**: 
+  - Headings: 2xl-6xl
+  - Body: sm-lg
+  - UI: xs-base
+
+### Color System
+- Uses OKLCH color space for better color reproduction
+- Dark/Light mode support with CSS variables
+- Key color tokens:
+  - `--background`
+  - `--foreground`
+  - `--primary`
+  - `--secondary`
+  - `--muted`
+  - `--accent`
+  - `--destructive`
+
+### Components
+1. **Layout Components**
+   - Card
+   - Sidebar
+   - Navigation Bar
+   - Container
+
+2. **Form Components**
+   - Button
+   - Input
+   - Form
+
+3. **Feedback Components**
+   - Loading Spinner
+   - Toast Notifications
+   - Skeleton Loaders
+
+### Spacing
+- Uses Tailwind's spacing scale
+- Container padding: p-4 (mobile) to p-8 (desktop)
+- Grid gaps: gap-4 to gap-8
+- Component margins: m-2 to m-8
+
+## Code Principles
+
+### File Structure
+```
+app/
+├── components/     # Reusable UI components
+├── lib/           # Utilities and configurations
+├── (routes)/      # Next.js app router pages
+└── globals.css    # Global styles
+```
+
+### Component Guidelines
+1. **Server vs Client Components**
+   - Default to Server Components
+   - Use "use client" only when needed for:
+     - Interactivity
+     - Browser APIs
+     - State management
+
+2. **Data Fetching**
+   - Use Server Components for initial data fetch
+   - Implement caching with `lib/data/cache`
+   - Handle loading states with Suspense
+
+3. **Error Handling**
+   - Use error boundaries
+   - Implement toast notifications for user feedback
+   - Log errors to console in development
+
+### State Management
+1. **Server State**
+   - Use Server Components
+   - Implement caching where appropriate
+   - Handle revalidation properly
+
+2. **Client State**
+   - Use React hooks for local state
+   - Implement context for shared state
+   - Keep state as close to usage as possible
+
+### Authentication
+1. **Supabase Auth Integration**
+   - Use `@supabase/ssr` package
+   - Implement middleware for session handling
+   - Handle auth state in layout components
+
+### Performance Guidelines
+1. **Image Optimization**
+   - Use Next.js Image component
+   - Implement proper sizing and loading strategies
+   - Use appropriate image formats
+
+2. **Component Loading**
+   - Implement Suspense boundaries
+   - Use skeleton loaders for better UX
+   - Lazy load non-critical components
+
+### Accessibility
+1. **Core Requirements**
+   - Semantic HTML
+   - ARIA labels where needed
+   - Keyboard navigation support
+   - Color contrast compliance
+
+2. **Form Accessibility**
+   - Clear error messages
+   - Proper label associations
+   - Focus management
+
+### Testing
+1. **Component Testing**
+   - Unit tests for utilities
+   - Integration tests for complex flows
+   - E2E tests for critical paths
+
+### Security
+1. **Authentication**
+   - Implement proper session handling
+   - Use middleware protection
+   - Handle auth errors gracefully
+
+2. **Data Protection**
+   - Validate all inputs
+   - Implement proper CORS policies
+   - Use environment variables for sensitive data
+
+## Development Workflow
+
+### Git Practices
+1. **Branch Naming**
+   - feature/
+   - fix/
+   - chore/
+   - refactor/
+
+2. **Commit Messages**
+   - Clear and concise
+   - Present tense
+   - Reference issues where applicable
+
+### Code Review Guidelines
+1. **Review Checklist**
+   - Performance impact
+   - Accessibility compliance
+   - Security considerations
+   - Test coverage
+   - Documentation updates
+
+### Documentation
+1. **Code Documentation**
+   - JSDoc for utilities
+   - Component props documentation
+   - README updates for new features
+
+2. **Architecture Documentation**
+   - Update diagrams when needed
+   - Document new patterns
+   - Maintain changelog 

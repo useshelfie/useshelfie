@@ -3,16 +3,16 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation" // For potential final redirect
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { CreateCompanyForm } from "@/components/forms/create-company" // Adjust path if needed
-import { OnboardingForm } from "@/components/forms/onboarding" // Adjust path if needed
+import { CompanyForm } from "@/components/company/forms/company" // Corrected path
+import { KeywordsForm } from "@/components/settings/forms/keywords" // Corrected name
 import { CheckCircle } from "lucide-react" // For final success state
 import { Button } from "@/components/ui/button"
 
 // Define the possible steps
-type OnboardingStep = "company" | "keywords" | "completed"
+type CreateStep = "company" | "keywords" | "completed"
 
-export default function MultiStepOnboardingPage() {
-  const [currentStep, setCurrentStep] = useState<OnboardingStep>("company")
+export default function MultiStepCreatePage() {
+  const [currentStep, setCurrentStep] = useState<CreateStep>("company")
   const [companyId, setCompanyId] = useState<string>("")
   const router = useRouter() // Get router instance
 
@@ -25,10 +25,6 @@ export default function MultiStepOnboardingPage() {
   // Callback for when keywords are saved successfully
   const handleKeywordsSaved = () => {
     setCurrentStep("completed")
-    // Optional: Redirect after a short delay
-    // setTimeout(() => {
-    //   router.push('/dashboard');
-    // }, 2000);
   }
 
   // Dynamically set card titles and descriptions
@@ -36,24 +32,24 @@ export default function MultiStepOnboardingPage() {
     switch (currentStep) {
       case "company":
         return {
-          title: "Let's Get Started",
-          description: "First, please tell us the name of your company or project.",
-          form: <CreateCompanyForm onSuccess={handleCompanyCreated} />,
+          title: "Create Your Company",
+          description: "Enter the name of your company or project to begin.",
+          form: <CompanyForm onSuccess={handleCompanyCreated} />,
         }
       case "keywords":
         return {
-          title: "Describe Your Business",
-          description: "Great! Now, help us understand your business better with three keywords.",
-          form: <OnboardingForm companyId={companyId} onSuccess={handleKeywordsSaved} />,
+          title: "Add Business Keywords",
+          description: "Provide three keywords that best describe your business.",
+          form: <KeywordsForm companyId={companyId} onSuccess={handleKeywordsSaved} />, // Renamed component
         }
       case "completed":
         return {
-          title: "Onboarding Complete!",
-          description: "You're all set up. Welcome aboard!",
+          title: "Creation Complete!",
+          description: "Your setup is finished. You are ready to proceed.",
           form: (
             <div className="text-center flex flex-col items-center gap-4 py-8">
               <CheckCircle className="w-16 h-16 text-green-500" />
-              <p className="text-muted-foreground">You can now proceed to your dashboard.</p>
+              <p className="text-muted-foreground">You can now access your dashboard.</p>
               {/* Optional: Add a button to redirect immediately */}
               <Button onClick={() => router.push("/dashboard")}>Go to Dashboard</Button>
             </div>
@@ -74,10 +70,7 @@ export default function MultiStepOnboardingPage() {
           <CardTitle className="text-2xl font-bold tracking-tight">{title}</CardTitle>
           <CardDescription className="text-muted-foreground pt-1">{description}</CardDescription>
         </CardHeader>
-        <CardContent>
-          {/* Render the appropriate form based on the current step */}
-          {form}
-        </CardContent>
+        <CardContent>{form}</CardContent>
       </Card>
     </div>
   )

@@ -1,18 +1,27 @@
 export const dynamic = "force-dynamic"
 
-import { CategoryList } from "./_components/category-list"
+import { CategoryList } from "@/components/lists/category"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { CreateCategoryForm } from "@/components/forms/category"
+import { CategoryForm } from "@/components/category/forms/category"
 import { Suspense } from "react"
-import { getCategoriesByCompanyID } from "@/lib/data/cache"
+import { getCategoriesByCompany } from "@/lib/data/categories"
+import { SkeletonLoader } from "@/components/ui/skeleton-loader"
+import { Metadata } from "next"
 
-export default function CategoriesDashboardPage() {
+export const metadata: Metadata = {
+  title: "Categories",
+  description: "Categories",
+}
+
+export default async function CategoriesDashboardPage({ params }: { params: Promise<{ company_id: string }> }) {
+  const companyId = (await params).company_id
+
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
       <h1 className="text-2xl font-semibold">Manage Categories</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <CreateCategoryForm />
+        <CategoryForm companyId={companyId} />
 
         <Card>
           <CardHeader>
@@ -23,13 +32,11 @@ export default function CategoriesDashboardPage() {
               fallback={
                 <div className="space-y-4">
                   {[...Array(3)].map((_, i) => (
-                    <div key={i} className="animate-pulse">
-                      <div className="h-16 bg-gray-200 rounded-md dark:bg-gray-800"></div>
-                    </div>
+                    <SkeletonLoader key={i} height={64} className="rounded-md" />
                   ))}
                 </div>
               }>
-              <CategoriesWrapper />
+              <CategoriesWrapper companyId={companyId} />
             </Suspense>
           </CardContent>
         </Card>
@@ -38,8 +45,8 @@ export default function CategoriesDashboardPage() {
   )
 }
 
-async function CategoriesWrapper() {
-  const categories = await getCategoriesByCompanyID()
+async function CategoriesWrapper({ companyId }: { companyId: string }) {
+  const categories = await getCategoriesByCompany(companyId)
 
   if (!categories?.length) {
     return (

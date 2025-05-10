@@ -1,0 +1,98 @@
+"use client"
+
+import { cn } from "@/lib/utils"
+// import { createClient } from "@/lib/supabase/client" // No longer needed
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import Link from "next/link"
+import { useActionState } from "react"
+import { forgotPasswordAction, ForgotPasswordFormState } from "@/app/auth/actions"
+import { useFormStatus } from "react-dom"
+import { Loader2, Terminal } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+
+// Initial state
+const initialState: ForgotPasswordFormState = {
+  message: null,
+  errors: undefined,
+  type: null,
+}
+
+// Submit Button
+function SubmitButton() {
+  const { pending } = useFormStatus()
+  return (
+    <Button type="submit" className="w-full" disabled={pending}>
+      {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+      {pending ? "Sending..." : "Send reset email"}
+    </Button>
+  )
+}
+
+export function ForgotPasswordForm({ className, ...props }: React.ComponentPropsWithoutRef<"div">) {
+  const [state, formAction] = useActionState(forgotPasswordAction, initialState)
+
+  return (
+    <div className={cn("flex flex-col gap-6", className)} {...props}>
+      {/* Show success message based on state.type */}
+      {state?.type === "success" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl">Check Your Email</CardTitle>
+            <CardDescription>Password reset instructions sent</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">{state.message}</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl">Reset Your Password</CardTitle>
+            <CardDescription>Type in your email and we&apos;ll send you a link to reset your password</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form action={formAction}>
+              <div className="flex flex-col gap-6">
+                {/* Display general/server error message */}
+                {state?.type === "error" && state.message && (
+                  <Alert variant="destructive">
+                    <Terminal className="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>
+                      {state.message}
+                      {state.errors?.server && ` (${state.errors.server.join(", ")})`}
+                    </AlertDescription>
+                  </Alert>
+                )}
+                <div className="grid gap-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    name="email" // Add name
+                    type="email"
+                    placeholder="m@example.com"
+                    required
+                    aria-describedby="email-error"
+                  />
+                  <div id="email-error" aria-live="polite" className="text-sm text-destructive">
+                    {state?.errors?.email?.map((e) => <p key={e}>{e}</p>)}
+                  </div>
+                </div>
+                <SubmitButton />
+              </div>
+              <div className="mt-4 text-center text-sm">
+                Remembered your password?{" "}
+                <Link href="/auth/login" className="underline underline-offset-4">
+                  Login
+                </Link>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  )
+}

@@ -17,6 +17,7 @@ export const productDatabaseSchema = z.object({
   price: z.number(),
   created_at: z.string(),
   company_id: z.string(),
+  catalog_id: z.number().nullable().optional(),
   image_links: z.array(z.string()).optional(),
 })
 

@@ -14,12 +14,23 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * Feel free to modify this pattern to include more paths.
+     * Match all dashboard routes to ensure authentication.
+     * Exclude API routes, static files, image optimization files, and common public files.
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/dashboard/:path*",
+
+    /*
+     * Match specific other routes that require authentication if any.
+     * Add them here, e.g., '/account/:path*'
+     */
+
+    /*
+     * The previous pattern was too broad, causing the middleware
+     * to run on unnecessary routes like '/', '/login', etc., adding latency.
+     * We explicitly exclude known public/static paths below if needed,
+     * but focusing the matcher on protected routes is generally better.
+     */
+    // Negative lookaheads can be complex; prefer positive matching:
+    // '/((?!_next/static|_next/image|favicon.ico|auth|login|/|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

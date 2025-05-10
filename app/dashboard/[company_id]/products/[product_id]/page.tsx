@@ -1,46 +1,60 @@
 import { createClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
-import Image from "next/image"
 import Link from "next/link"
 import { ChevronLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { formatPrice } from "@/lib/utils"
+import { EditProductForm } from "@/components/product/forms/edit-product-form"
+import { DeleteProductButton } from "@/components/product/delete-button"
+import { Metadata } from "next"
+import { getCategoriesByCompany } from "@/lib/data/categories"
+import { getProductById } from "@/lib/data/products"
 
-export default async function ProductPage({ params }: { params: Promise<{ product_id: string; company_id: string }> }) {
+export const metadata: Metadata = {
+  title: "Product",
+  description: "Product",
+}
+
+export default async function ProductEditPage({ params }: { params: { product_id: string; company_id: string } }) {
   const supabase = await createClient()
-  const { product_id, company_id } = await params
+  const { product_id, company_id } = params
 
-  // Fetch product with its categories
-  const { data: product, error } = await supabase
+  // Fetch product with its currently linked categories
+  const { data: product, error: productError } = await supabase
     .from("products")
     .select(
       `
       *,
       product_categories (
-        category:categories (
-          id,
-          name
-        )
+        category_id
       )
     `
     )
     .eq("id", product_id)
+    // Ensure the product belongs to the company in the URL
+    .eq("company_id", parseInt(company_id, 10))
     .single()
 
-  if (error || !product) {
-    console.error("Error fetching product:", error)
+  if (productError || !product) {
+    console.error("Error fetching product:", productError)
     notFound()
   }
 
-  // Extract categories from the nested structure
-  const categories =
-    product.product_categories?.map((pc: { category: { id: string; name: string } }) => pc.category).filter(Boolean) ||
-    []
+  // Fetch all categories available for this company
+  const { data: availableCategories, error: categoriesError } = await supabase
+    .from("categories")
+    .select("id, name")
+    .eq("company_id", product.company_id)
+    .order("name")
+
+  if (categoriesError) {
+    console.error("Error fetching available categories:", categoriesError)
+    // Handle error appropriately - maybe show message or default to empty list?
+    // For now, proceed with potentially empty list
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-2xl mx-auto">
         {/* Back Button */}
         <Link href={`/dashboard/${company_id}/products`}>
           <Button variant="ghost" className="mb-6">
@@ -49,80 +63,17 @@ export default async function ProductPage({ params }: { params: Promise<{ produc
           </Button>
         </Link>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="grid md:grid-cols-2 gap-8">
-              {/* Image Gallery */}
-              <div className="space-y-4">
-                {product.image_links && product.image_links.length > 0 ? (
-                  <div className="aspect-square relative rounded-lg overflow-hidden border">
-                    <Image
-                      src={product.image_links[0]}
-                      alt={product.name}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 100vw, 50vw"
-                      priority
-                    />
-                  </div>
-                ) : (
-                  <div className="aspect-square bg-muted rounded-lg flex items-center justify-center">
-                    <p className="text-muted-foreground">No image available</p>
-                  </div>
-                )}
-                {product.image_links && product.image_links.length > 1 && (
-                  <div className="grid grid-cols-4 gap-2">
-                    {product.image_links.slice(1).map((url: string, i: number) => (
-                      <div key={i} className="aspect-square relative rounded-lg overflow-hidden border">
-                        <Image
-                          src={url}
-                          alt={`${product.name} - Image ${i + 2}`}
-                          fill
-                          className="object-cover"
-                          sizes="(max-width: 768px) 25vw, 12vw"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+        {/* Edit Form */}
+        <EditProductForm
+          product={product}
+          availableCategories={availableCategories || []}
+          companyId={product.company_id}
+        />
 
-              {/* Product Details */}
-              <div className="space-y-6">
-                <div>
-                  <h1 className="text-3xl font-bold">{product.name}</h1>
-                  <p className="text-2xl font-semibold mt-2 text-primary">{formatPrice(product.price)}</p>
-                </div>
-
-                {product.description && (
-                  <div>
-                    <h2 className="text-lg font-semibold mb-2">Description</h2>
-                    <p className="text-muted-foreground whitespace-pre-wrap">{product.description}</p>
-                  </div>
-                )}
-
-                {categories.length > 0 && (
-                  <div>
-                    <h2 className="text-lg font-semibold mb-2">Categories</h2>
-                    <div className="flex flex-wrap gap-2">
-                      {categories.map((category: { id: string; name: string }) => (
-                        <span
-                          key={category.id}
-                          className="px-3 py-1 rounded-full bg-secondary text-secondary-foreground text-sm">
-                          {category.name}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="pt-6">
-                  <Button className="w-full">Edit Product</Button>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Delete Button (with spacing) */}
+        <div className="mt-8 pt-8 border-t border-destructive/20">
+          <DeleteProductButton productId={product.id} productName={product.name} companyId={product.company_id} />
+        </div>
       </div>
     </div>
   )
